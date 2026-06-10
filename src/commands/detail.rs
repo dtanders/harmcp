@@ -14,10 +14,8 @@ pub fn run(
     format: &OutputFormat,
 ) -> Result<()> {
     let mut found = false;
-    let mut total = 0usize;
     let reader = BufReader::new(File::open(file)?);
-    stream_entries(reader, |idx, entry| {
-        total = idx + 1;
+    let total = stream_entries(reader, |idx, entry| {
         if idx == target {
             found = true;
             output::print_detail(format, &entry, idx, section);
