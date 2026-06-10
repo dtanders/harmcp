@@ -1,5 +1,6 @@
 mod cli;
 mod error;
+mod filter;
 mod har;
 
 use clap::Parser;
