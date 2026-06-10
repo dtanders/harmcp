@@ -55,6 +55,15 @@ pub struct ListArgs {
     /// Maximum response body size in bytes
     #[arg(long)]
     pub max_size: Option<i64>,
+    /// Exclude image, video, audio, and font responses
+    #[arg(long = "no-media")]
+    pub no_media: bool,
+    /// Exclude CSS responses
+    #[arg(long = "no-css")]
+    pub no_css: bool,
+    /// Exclude media and CSS responses (shorthand for --no-media --no-css)
+    #[arg(long = "no-assets")]
+    pub no_assets: bool,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default)]

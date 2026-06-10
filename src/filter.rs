@@ -12,6 +12,8 @@ pub struct Filters {
     mime: Option<String>,
     min_size: Option<i64>,
     max_size: Option<i64>,
+    exclude_media: bool,
+    exclude_css: bool,
 }
 
 impl Filters {
@@ -29,6 +31,8 @@ impl Filters {
             mime: args.mime.as_deref().map(str::to_lowercase),
             min_size: args.min_size,
             max_size: args.max_size,
+            exclude_media: args.no_media || args.no_assets,
+            exclude_css: args.no_css || args.no_assets,
         })
     }
 
@@ -68,8 +72,28 @@ impl Filters {
                 return false;
             }
         }
+        if self.exclude_media && is_media_mime(&entry.response.content.mime_type) {
+            return false;
+        }
+        if self.exclude_css && is_css_mime(&entry.response.content.mime_type) {
+            return false;
+        }
         true
     }
+}
+
+fn is_media_mime(mime: &str) -> bool {
+    let m = mime.to_ascii_lowercase();
+    m.starts_with("image/")
+        || m.starts_with("video/")
+        || m.starts_with("audio/")
+        || m.starts_with("font/")
+        || m.starts_with("application/font-")
+        || m.starts_with("application/x-font-")
+}
+
+fn is_css_mime(mime: &str) -> bool {
+    mime.to_ascii_lowercase().starts_with("text/css")
 }
 
 fn matches_status(status: u16, pattern: &str) -> bool {
@@ -139,6 +163,9 @@ mod tests {
             mime: None,
             min_size: None,
             max_size: None,
+            no_media: false,
+            no_css: false,
+            no_assets: false,
         }
     }
 
@@ -214,6 +241,34 @@ mod tests {
         })
         .unwrap();
         assert!(!f2.matches(&entry));
+    }
+
+    #[test]
+    fn no_media_excludes_image_video_audio_font() {
+        let f = Filters::from_args(&ListArgs { no_media: true, ..no_filters() }).unwrap();
+        for mime in &["image/png", "image/svg+xml", "video/mp4", "audio/mpeg", "font/woff2", "application/font-woff", "application/x-font-ttf"] {
+            assert!(!f.matches(&make_entry("GET", "", 200, mime, 0)), "should exclude {mime}");
+        }
+        assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
+        assert!(f.matches(&make_entry("GET", "", 200, "text/css", 0)));
+    }
+
+    #[test]
+    fn no_css_excludes_css_only() {
+        let f = Filters::from_args(&ListArgs { no_css: true, ..no_filters() }).unwrap();
+        assert!(!f.matches(&make_entry("GET", "", 200, "text/css", 0)));
+        assert!(!f.matches(&make_entry("GET", "", 200, "text/css; charset=utf-8", 0)));
+        assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
+        assert!(f.matches(&make_entry("GET", "", 200, "image/png", 0)));
+    }
+
+    #[test]
+    fn no_assets_excludes_both_media_and_css() {
+        let f = Filters::from_args(&ListArgs { no_assets: true, ..no_filters() }).unwrap();
+        assert!(!f.matches(&make_entry("GET", "", 200, "image/png", 0)));
+        assert!(!f.matches(&make_entry("GET", "", 200, "text/css", 0)));
+        assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
+        assert!(f.matches(&make_entry("GET", "", 200, "text/html", 0)));
     }
 
     #[test]

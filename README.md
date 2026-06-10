@@ -42,6 +42,9 @@ IDX    METHOD   STATUS  URL                                                     
 | `--url-regex` | Rust regex | `--url-regex 'auth\|login'` |
 | `--mime` | substring, case-insensitive | `--mime json` · `--mime image` |
 | `--min-size` / `--max-size` | response body bytes | `--min-size 100000` |
+| `--no-media` | exclude image, video, audio, font | |
+| `--no-css` | exclude CSS | |
+| `--no-assets` | exclude media + CSS (both of the above) | |
 
 Filters combine with AND. Show only large server errors:
 ```

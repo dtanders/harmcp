@@ -43,6 +43,9 @@ Narrow down to entries of interest before diving into details.
 | URL regex | `--url-regex` | `--url-regex 'auth|login|token'` |
 | MIME type | `--mime` | `--mime json`, `--mime image` |
 | Response size | `--min-size` / `--max-size` | `--min-size 100000` |
+| No media | `--no-media` | excludes image, video, audio, font |
+| No CSS | `--no-css` | |
+| No media or CSS | `--no-assets` | shorthand for both |
 
 Filters combine with AND. Find large failed JSON responses:
 
