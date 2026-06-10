@@ -51,16 +51,28 @@ fn list_filter_by_status_4xx() {
 
 #[test]
 fn list_filter_by_url_substring() {
-    harmcp(&["list", "--url", "users"])
+    let out = harmcp(&["list", "--url", "users"])
         .success()
-        .stdout(predicate::str::contains("users"));
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).collect();
+    assert!(data_rows.iter().any(|l| l.contains("users")));
+    assert!(!data_rows.iter().any(|l| l.contains("login")));
 }
 
 #[test]
 fn list_filter_by_mime() {
-    harmcp(&["list", "--mime", "json"])
+    let out = harmcp(&["list", "--mime", "json"])
         .success()
-        .stdout(predicate::str::contains("application/json"));
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).collect();
+    assert!(data_rows.iter().any(|l| l.contains("application/json")));
+    assert!(!data_rows.iter().any(|l| l.contains("text/html")));
 }
 
 #[test]
