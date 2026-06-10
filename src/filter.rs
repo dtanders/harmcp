@@ -24,9 +24,9 @@ impl Filters {
         Ok(Self {
             method: args.method.clone(),
             status: args.status.clone(),
-            url: args.url.clone(),
+            url: args.url.as_deref().map(str::to_lowercase),
             url_regex,
-            mime: args.mime.clone(),
+            mime: args.mime.as_deref().map(str::to_lowercase),
             min_size: args.min_size,
             max_size: args.max_size,
         })
@@ -44,7 +44,7 @@ impl Filters {
             }
         }
         if let Some(u) = &self.url {
-            if !entry.request.url.to_lowercase().contains(&u.to_lowercase()) {
+            if !entry.request.url.to_lowercase().contains(u.as_str()) {
                 return false;
             }
         }
@@ -54,13 +54,7 @@ impl Filters {
             }
         }
         if let Some(m) = &self.mime {
-            if !entry
-                .response
-                .content
-                .mime_type
-                .to_lowercase()
-                .contains(&m.to_lowercase())
-            {
+            if !entry.response.content.mime_type.to_lowercase().contains(m.as_str()) {
                 return false;
             }
         }
@@ -203,6 +197,23 @@ mod tests {
         let entry = make_entry("GET", "", 200, "application/json; charset=utf-8", 0);
         let f = Filters::from_args(&ListArgs { mime: Some("json".into()), ..no_filters() }).unwrap();
         assert!(f.matches(&entry));
+    }
+
+    #[test]
+    fn url_regex_matches_and_rejects() {
+        let entry = make_entry("GET", "https://example.com/api/v2/users", 200, "", 0);
+        let f = Filters::from_args(&ListArgs {
+            url_regex: Some(r"api/v\d+/".into()),
+            ..no_filters()
+        })
+        .unwrap();
+        assert!(f.matches(&entry));
+        let f2 = Filters::from_args(&ListArgs {
+            url_regex: Some(r"^https://other\.com".into()),
+            ..no_filters()
+        })
+        .unwrap();
+        assert!(!f2.matches(&entry));
     }
 
     #[test]
