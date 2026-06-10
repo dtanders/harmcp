@@ -23,8 +23,10 @@ fn format_row<F: Fn(&Column) -> String>(columns: &[Column], value: F) -> String 
         .map(|c| {
             let w = column_width(c);
             let v = value(c);
-            let cell = if v.len() > w {
-                format!("{}...", &v[..w.saturating_sub(3)])
+            let char_len = v.chars().count();
+            let cell = if char_len > w {
+                let truncated: String = v.chars().take(w.saturating_sub(3)).collect();
+                format!("{}...", truncated)
             } else {
                 v
             };
