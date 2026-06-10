@@ -39,10 +39,6 @@ jobs:
             runner: windows-latest
             binary: harmcp.exe
             ext: .exe
-          - target: x86_64-apple-darwin
-            runner: macos-latest
-            binary: harmcp
-            ext: ""
           - target: aarch64-apple-darwin
             runner: macos-latest
             binary: harmcp
