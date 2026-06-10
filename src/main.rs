@@ -2,6 +2,7 @@ mod cli;
 mod error;
 mod filter;
 mod har;
+mod output;
 
 use clap::Parser;
 
