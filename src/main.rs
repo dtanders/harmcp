@@ -1,4 +1,9 @@
+mod cli;
 mod error;
 mod har;
 
-fn main() {}
+use clap::Parser;
+
+fn main() {
+    let _cli = cli::Cli::parse();
+}
