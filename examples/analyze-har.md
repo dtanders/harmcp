@@ -28,7 +28,7 @@ For machine-readable output, use `--format json` (one JSON object per line) or `
 
 ```bash
 harmcp --format json capture.har list
-harmcp --format tsv  capture.har list
+harmcp --format tsv capture.har list
 ```
 
 ## Filter the list
@@ -55,7 +55,7 @@ harmcp capture.har list --status 5xx --mime json --min-size 1000
 Once you have an IDX, use detail commands to dig in.
 
 ```bash
-harmcp capture.har headers 4    # request + response headers
+harmcp capture.har headers  4   # request + response headers
 harmcp capture.har body     4   # request payload + response body
 harmcp capture.har timings  4   # blocked/dns/connect/send/wait/receive breakdown
 harmcp capture.har stack    4   # JS initiator call stack (if present)
@@ -82,7 +82,7 @@ The last TSV column is `time_ms`; sort descending to surface slow entries.
 
 ```bash
 # List errors
-harmcp capture.har list --status 4xx --status 5xx
+harmcp capture.har list --status 400-599
 
 # Inspect entry 7
 harmcp capture.har all 7
