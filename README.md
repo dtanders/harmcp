@@ -106,7 +106,17 @@ JSON list output (one line per entry, safe to pipe into `jq`):
 
 ## AI agent usage
 
-See [`examples/analyze-har.md`](examples/analyze-har.md) for a Claude Code skill with common investigation workflows.
+[`examples/analyze-har.md`](examples/analyze-har.md) is a Claude Code skill. Copy it to your skills folder to install:
+
+```bash
+# global (all projects)
+cp examples/analyze-har.md ~/.claude/skills/
+
+# project-local
+cp examples/analyze-har.md .claude/skills/
+```
+
+Once installed, invoke it with `/analyze-har` or `Skill({ skill: "analyze-har" })`.
 
 ## How it works
 
