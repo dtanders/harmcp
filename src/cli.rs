@@ -2,7 +2,11 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "harmcp", about = "Extract structured data from HAR log files")]
+#[command(
+    name = "harmcp",
+    version,
+    about = "Extract structured data from HAR log files"
+)]
 pub struct Cli {
     /// Path to the HAR file
     pub file: PathBuf,

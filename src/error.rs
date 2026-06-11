@@ -6,8 +6,6 @@ pub enum HarError {
     Io(#[from] std::io::Error),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("Not a valid HAR file: {0}")]
-    NotHar(String),
     #[error("Entry {index} not found (file has {total} entries)")]
     IndexOutOfRange { index: usize, total: usize },
     #[error("Invalid regex: {0}")]

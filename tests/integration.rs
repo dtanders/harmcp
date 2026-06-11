@@ -156,3 +156,13 @@ fn nonexistent_file_exits_nonzero() {
         .assert()
         .failure();
 }
+
+#[test]
+fn version_flag_prints_version() {
+    Command::cargo_bin("harmcp")
+        .unwrap()
+        .arg("--version")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")));
+}
