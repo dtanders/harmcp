@@ -123,6 +123,12 @@ pub struct FilterArgs {
     /// Exclude entries with this HTTP method (case-insensitive)
     #[arg(long = "not-method")]
     pub not_method: Option<String>,
+    /// Keep entries with this request header: NAME or NAME=VALUE-substring (repeatable)
+    #[arg(long = "header")]
+    pub header: Vec<String>,
+    /// Keep entries with this response header: NAME or NAME=VALUE-substring (repeatable)
+    #[arg(long = "resp-header")]
+    pub resp_header: Vec<String>,
 }
 
 #[derive(Args)]

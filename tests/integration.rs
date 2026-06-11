@@ -295,3 +295,16 @@ fn list_not_mime_excludes_json() {
     assert!(!data_rows.iter().any(|l| l.contains("application/json")));
     assert!(data_rows.iter().any(|l| l.contains("text/html")));
 }
+
+#[test]
+fn list_header_filter() {
+    let out = harmcp(&["list", "--header", "accept"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).collect();
+    assert!(data_rows.iter().any(|l| l.contains("api/users")));
+    assert!(!data_rows.iter().any(|l| l.contains("login")));
+}

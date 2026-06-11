@@ -3,7 +3,7 @@ use regex::Regex;
 
 use crate::cli::FilterArgs;
 use crate::error::Result;
-use crate::har::types::Entry;
+use crate::har::types::{Entry, Header};
 
 pub struct Filters {
     method: Option<String>,
@@ -23,6 +23,8 @@ pub struct Filters {
     not_mime: Option<String>,
     not_status: Option<String>,
     not_method: Option<String>,
+    header: Vec<(String, Option<String>)>,
+    resp_header: Vec<(String, Option<String>)>,
 }
 
 impl Filters {
@@ -46,6 +48,12 @@ impl Filters {
             not_mime: args.not_mime.as_deref().map(str::to_lowercase),
             not_status: args.not_status.clone(),
             not_method: args.not_method.clone(),
+            header: args.header.iter().map(|s| parse_header_filter(s)).collect(),
+            resp_header: args
+                .resp_header
+                .iter()
+                .map(|s| parse_header_filter(s))
+                .collect(),
         })
     }
 
@@ -133,6 +141,12 @@ impl Filters {
                 return false;
             }
         }
+        if !headers_match(&entry.request.headers, &self.header) {
+            return false;
+        }
+        if !headers_match(&entry.response.headers, &self.resp_header) {
+            return false;
+        }
         if self.after.is_some() || self.before.is_some() {
             match DateTime::parse_from_rfc3339(&entry.started_date_time) {
                 Err(_) => return false,
@@ -166,6 +180,24 @@ fn is_media_mime(mime: &str) -> bool {
 
 fn is_css_mime(mime: &str) -> bool {
     mime.to_ascii_lowercase().starts_with("text/css")
+}
+
+fn parse_header_filter(s: &str) -> (String, Option<String>) {
+    match s.split_once('=') {
+        Some((name, value)) => (name.to_lowercase(), Some(value.to_lowercase())),
+        None => (s.to_lowercase(), None),
+    }
+}
+
+fn headers_match(headers: &[Header], wanted: &[(String, Option<String>)]) -> bool {
+    wanted.iter().all(|(name, value)| {
+        headers.iter().any(|h| {
+            h.name.to_lowercase() == *name
+                && value
+                    .as_deref()
+                    .map_or(true, |v| h.value.to_lowercase().contains(v))
+        })
+    })
 }
 
 fn parse_when(s: &str) -> crate::error::Result<DateTime<FixedOffset>> {
@@ -505,5 +537,63 @@ mod tests {
         .unwrap();
         assert!(!f2.matches(&slow));
         assert!(f2.matches(&fast));
+    }
+
+    #[test]
+    fn header_filter_by_name_and_value() {
+        let mut e = make_entry("GET", "https://a.com", 200, "", 0);
+        e.request.headers = vec![Header {
+            name: "Authorization".to_string(),
+            value: "Bearer tok123".to_string(),
+        }];
+
+        let f = Filters::from_args(&FilterArgs {
+            header: vec!["authorization".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&e));
+
+        let f = Filters::from_args(&FilterArgs {
+            header: vec!["authorization=bearer".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&e));
+
+        let f = Filters::from_args(&FilterArgs {
+            header: vec!["authorization=basic".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
+
+        let f = Filters::from_args(&FilterArgs {
+            header: vec!["x-missing".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
+    }
+
+    #[test]
+    fn resp_header_filter() {
+        let mut e = make_entry("GET", "https://a.com", 200, "", 0);
+        e.response.headers = vec![Header {
+            name: "Cache-Control".to_string(),
+            value: "no-store".to_string(),
+        }];
+        let f = Filters::from_args(&FilterArgs {
+            resp_header: vec!["cache-control=no-store".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&e));
+        let f = Filters::from_args(&FilterArgs {
+            resp_header: vec!["etag".into()],
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
     }
 }
