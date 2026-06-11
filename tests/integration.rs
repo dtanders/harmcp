@@ -308,3 +308,31 @@ fn list_header_filter() {
     assert!(data_rows.iter().any(|l| l.contains("api/users")));
     assert!(!data_rows.iter().any(|l| l.contains("login")));
 }
+
+#[test]
+fn list_limit_caps_rows() {
+    let out = harmcp(&["list", "--limit", "1"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).filter(|l| !l.trim().is_empty()).collect();
+    assert_eq!(data_rows.len(), 1);
+}
+
+#[test]
+fn list_sort_time_desc_puts_slowest_first() {
+    let out = harmcp(&["--format", "tsv", "list", "--sort", "time", "--desc"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let first_data = s.lines().nth(1).unwrap(); // tsv has 1 header line
+                                                // entry 0 (123.4 ms) is the slowest in the fixture
+    assert!(
+        first_data.contains("api/users"),
+        "expected slowest first, got: {first_data}"
+    );
+}

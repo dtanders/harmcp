@@ -138,6 +138,15 @@ pub struct ListArgs {
     /// Columns to display, comma-separated: index,method,status,url,mime,size,time
     #[arg(long, value_delimiter = ',')]
     pub columns: Option<Vec<Column>>,
+    /// Stop after N matching entries
+    #[arg(long)]
+    pub limit: Option<usize>,
+    /// Sort by this column (buffers matching entries in memory)
+    #[arg(long, value_enum)]
+    pub sort: Option<Column>,
+    /// Sort descending (requires --sort)
+    #[arg(long, requires = "sort")]
+    pub desc: bool,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default)]
