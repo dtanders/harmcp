@@ -3,6 +3,7 @@ mod commands;
 mod error;
 mod filter;
 mod har;
+mod input;
 mod output;
 
 use clap::Parser;

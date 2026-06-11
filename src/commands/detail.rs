@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 
 use crate::cli::OutputFormat;
@@ -14,7 +12,7 @@ pub fn run(
     format: &OutputFormat,
 ) -> Result<()> {
     let mut found = false;
-    let reader = BufReader::new(File::open(file)?);
+    let reader = crate::input::open(file)?;
     let total = stream_entries(reader, |idx, entry| {
         if idx == target {
             found = true;
@@ -24,7 +22,10 @@ pub fn run(
         Ok(true)
     })?;
     if !found {
-        return Err(HarError::IndexOutOfRange { index: target, total });
+        return Err(HarError::IndexOutOfRange {
+            index: target,
+            total,
+        });
     }
     Ok(())
 }

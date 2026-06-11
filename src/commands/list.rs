@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 
 use crate::cli::{Column, ListArgs, OutputFormat};
@@ -11,7 +9,7 @@ use crate::output;
 pub fn run(file: &Path, args: &ListArgs, format: &OutputFormat) -> Result<()> {
     let columns = args.columns.clone().unwrap_or_else(Column::defaults);
     let filters = Filters::from_args(args)?;
-    let reader = BufReader::new(File::open(file)?);
+    let reader = crate::input::open(file)?;
     output::print_list_header(format, &columns);
     stream_entries(reader, |idx, entry| {
         if filters.matches(&entry) {

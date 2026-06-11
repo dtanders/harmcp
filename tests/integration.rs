@@ -166,3 +166,16 @@ fn version_flag_prints_version() {
         .success()
         .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")));
 }
+
+#[test]
+fn stdin_input_with_dash() {
+    let har = std::fs::read_to_string("tests/fixtures/sample.har").unwrap();
+    Command::cargo_bin("harmcp")
+        .unwrap()
+        .arg("-")
+        .arg("list")
+        .write_stdin(har)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("api/users"));
+}
