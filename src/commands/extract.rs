@@ -11,12 +11,18 @@ pub fn run(file: &Path, target: usize, out: &Path) -> Result<()> {
     let reader = input::open(file)?;
     let total = stream_entries(reader, |idx, entry| {
         if idx == target {
-            bytes = Some(match entry.response.content.decoded_body() {
+            let body_bytes = match entry.response.content.decoded_body() {
                 DecodedBody::None => Vec::new(),
-                DecodedBody::Text(t) | DecodedBody::Invalid(t) => t.as_bytes().to_vec(),
+                DecodedBody::Text(t) => t.as_bytes().to_vec(),
                 DecodedBody::DecodedText(s) => s.into_bytes(),
                 DecodedBody::Binary(b) => b,
-            });
+                DecodedBody::Invalid(_) => {
+                    return Err(HarError::Usage(format!(
+                        "entry {target} body is marked base64 but failed to decode"
+                    )));
+                }
+            };
+            bytes = Some(body_bytes);
             return Ok(false);
         }
         Ok(true)
@@ -36,6 +42,5 @@ pub fn run(file: &Path, target: usize, out: &Path) -> Result<()> {
         )));
     }
     std::fs::write(out, &bytes)?;
-    eprintln!("wrote {} bytes to {}", bytes.len(), out.display());
     Ok(())
 }
