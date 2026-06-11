@@ -10,6 +10,8 @@ pub enum HarError {
     IndexOutOfRange { index: usize, total: usize },
     #[error("Invalid regex: {0}")]
     InvalidRegex(#[from] regex::Error),
+    #[error("{0}")]
+    Usage(String),
 }
 
 pub type Result<T> = std::result::Result<T, HarError>;

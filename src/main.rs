@@ -17,9 +17,18 @@ fn main() {
         Command::Headers { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::Headers, &cli.format)
         }
-        Command::Body { indices } => {
-            commands::detail::run(&cli.file, indices, DetailSection::Body, &cli.format)
-        }
+        Command::Body { indices, output } => match output {
+            Some(path) => {
+                if indices.len() != 1 {
+                    Err(error::HarError::Usage(
+                        "--output requires a single index".to_string(),
+                    ))
+                } else {
+                    commands::extract::run(&cli.file, indices[0], path)
+                }
+            }
+            None => commands::detail::run(&cli.file, indices, DetailSection::Body, &cli.format),
+        },
         Command::Timings { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::Timings, &cli.format)
         }

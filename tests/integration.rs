@@ -203,3 +203,25 @@ fn body_of_base64_binary_entry_shows_note_not_garbage() {
         .stdout(predicate::str::contains("binary body"))
         .stdout(predicate::str::contains("4 bytes"));
 }
+
+#[test]
+fn body_output_writes_decoded_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("logo.png");
+    Command::cargo_bin("harmcp")
+        .unwrap()
+        .arg("tests/fixtures/sample.har")
+        .args(["body", "2", "--output"])
+        .arg(&out)
+        .assert()
+        .success();
+    let bytes = std::fs::read(&out).unwrap();
+    assert_eq!(bytes.len(), 4); // "iVBORw==" decodes to 4 bytes
+}
+
+#[test]
+fn body_output_rejects_multiple_indices() {
+    harmcp(&["body", "0", "1", "--output", "x.bin"])
+        .failure()
+        .stderr(predicate::str::contains("single index"));
+}

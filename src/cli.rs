@@ -30,6 +30,9 @@ pub enum Command {
     Body {
         #[arg(num_args = 1.., required = true)]
         indices: Vec<usize>,
+        /// Write the decoded response body to this file instead of stdout
+        #[arg(long)]
+        output: Option<PathBuf>,
     },
     /// Timing breakdown for one or more entries
     Timings {
