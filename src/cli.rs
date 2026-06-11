@@ -65,6 +65,8 @@ pub enum Command {
         #[arg(num_args = 1.., required = true)]
         indices: Vec<usize>,
     },
+    /// Aggregate statistics for the file (respects all filter flags)
+    Summary(FilterArgs),
 }
 
 #[derive(Args, Default)]

@@ -322,6 +322,38 @@ fn list_limit_caps_rows() {
 }
 
 #[test]
+fn summary_shows_counts_and_classes() {
+    harmcp(&["summary"])
+        .success()
+        .stdout(predicate::str::contains("entries:"))
+        .stdout(predicate::str::contains("2xx"))
+        .stdout(predicate::str::contains("4xx"))
+        .stdout(predicate::str::contains("example.com"));
+}
+
+#[test]
+fn summary_json_is_valid() {
+    let out = harmcp(&["--format", "json", "summary"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["entries"], 4);
+}
+
+#[test]
+fn summary_respects_filters() {
+    let out = harmcp(&["--format", "json", "summary", "--status", "4xx"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["entries"], 1);
+}
+
+#[test]
 fn list_sort_time_desc_puts_slowest_first() {
     let out = harmcp(&["--format", "tsv", "list", "--sort", "time", "--desc"])
         .success()
