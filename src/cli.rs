@@ -67,11 +67,8 @@ pub enum Command {
     },
 }
 
-#[derive(Args)]
-pub struct ListArgs {
-    /// Columns to display, comma-separated: index,method,status,url,mime,size,time
-    #[arg(long, value_delimiter = ',')]
-    pub columns: Option<Vec<Column>>,
+#[derive(Args, Default)]
+pub struct FilterArgs {
     /// Filter by HTTP method, case-insensitive exact match (e.g. GET, post)
     #[arg(long)]
     pub method: Option<String>,
@@ -102,6 +99,15 @@ pub struct ListArgs {
     /// Exclude media and CSS responses (shorthand for --no-media --no-css)
     #[arg(long = "no-assets")]
     pub no_assets: bool,
+}
+
+#[derive(Args)]
+pub struct ListArgs {
+    #[command(flatten)]
+    pub filters: FilterArgs,
+    /// Columns to display, comma-separated: index,method,status,url,mime,size,time
+    #[arg(long, value_delimiter = ',')]
+    pub columns: Option<Vec<Column>>,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default)]

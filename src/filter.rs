@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::cli::ListArgs;
+use crate::cli::FilterArgs;
 use crate::error::Result;
 use crate::har::types::Entry;
 
@@ -17,7 +17,7 @@ pub struct Filters {
 }
 
 impl Filters {
-    pub fn from_args(args: &ListArgs) -> Result<Self> {
+    pub fn from_args(args: &FilterArgs) -> Result<Self> {
         let url_regex = args.url_regex.as_deref().map(Regex::new).transpose()?;
         Ok(Self {
             method: args.method.clone(),
@@ -120,7 +120,7 @@ fn matches_status(status: u16, pattern: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::ListArgs;
+    use crate::cli::FilterArgs;
     use crate::har::types::*;
 
     fn make_entry(method: &str, url: &str, status: u16, mime: &str, size: i64) -> Entry {
@@ -133,41 +133,25 @@ mod tests {
         e
     }
 
-    fn no_filters() -> ListArgs {
-        ListArgs {
-            columns: None,
-            method: None,
-            status: None,
-            url: None,
-            url_regex: None,
-            mime: None,
-            min_size: None,
-            max_size: None,
-            no_media: false,
-            no_css: false,
-            no_assets: false,
-        }
-    }
-
     #[test]
     fn no_filters_matches_all() {
         let entry = make_entry("GET", "https://a.com", 200, "text/html", 100);
-        let f = Filters::from_args(&no_filters()).unwrap();
+        let f = Filters::from_args(&FilterArgs::default()).unwrap();
         assert!(f.matches(&entry));
     }
 
     #[test]
     fn method_filter_case_insensitive() {
         let entry = make_entry("GET", "https://a.com", 200, "text/html", 100);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             method: Some("get".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
-        let f2 = Filters::from_args(&ListArgs {
+        let f2 = Filters::from_args(&FilterArgs {
             method: Some("POST".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f2.matches(&entry));
@@ -176,15 +160,15 @@ mod tests {
     #[test]
     fn status_exact_match() {
         let entry = make_entry("GET", "", 200, "", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             status: Some("200".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
-        let f2 = Filters::from_args(&ListArgs {
+        let f2 = Filters::from_args(&FilterArgs {
             status: Some("404".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f2.matches(&entry));
@@ -194,9 +178,9 @@ mod tests {
     fn status_wildcard_4xx() {
         let ok = make_entry("GET", "", 200, "", 0);
         let err = make_entry("GET", "", 404, "", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             status: Some("4xx".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f.matches(&ok));
@@ -206,9 +190,9 @@ mod tests {
     #[test]
     fn status_range() {
         let entry = make_entry("GET", "", 201, "", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             status: Some("200-299".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
@@ -219,9 +203,9 @@ mod tests {
     #[test]
     fn url_substring_case_insensitive() {
         let entry = make_entry("GET", "https://EXAMPLE.com/API/users", 200, "", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             url: Some("api".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
@@ -230,9 +214,9 @@ mod tests {
     #[test]
     fn mime_substring() {
         let entry = make_entry("GET", "", 200, "application/json; charset=utf-8", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             mime: Some("json".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
@@ -241,15 +225,15 @@ mod tests {
     #[test]
     fn url_regex_matches_and_rejects() {
         let entry = make_entry("GET", "https://example.com/api/v2/users", 200, "", 0);
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             url_regex: Some(r"api/v\d+/".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(f.matches(&entry));
-        let f2 = Filters::from_args(&ListArgs {
+        let f2 = Filters::from_args(&FilterArgs {
             url_regex: Some(r"^https://other\.com".into()),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f2.matches(&entry));
@@ -257,9 +241,9 @@ mod tests {
 
     #[test]
     fn no_media_excludes_image_video_audio_font() {
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             no_media: true,
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         for mime in &[
@@ -282,9 +266,9 @@ mod tests {
 
     #[test]
     fn no_css_excludes_css_only() {
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             no_css: true,
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f.matches(&make_entry("GET", "", 200, "text/css", 0)));
@@ -295,9 +279,9 @@ mod tests {
 
     #[test]
     fn no_assets_excludes_both_media_and_css() {
-        let f = Filters::from_args(&ListArgs {
+        let f = Filters::from_args(&FilterArgs {
             no_assets: true,
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(!f.matches(&make_entry("GET", "", 200, "image/png", 0)));
@@ -309,14 +293,14 @@ mod tests {
     #[test]
     fn size_min_max() {
         let entry = make_entry("GET", "", 200, "", 500);
-        let fmin = Filters::from_args(&ListArgs {
+        let fmin = Filters::from_args(&FilterArgs {
             min_size: Some(100),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
-        let fmax = Filters::from_args(&ListArgs {
+        let fmax = Filters::from_args(&FilterArgs {
             max_size: Some(100),
-            ..no_filters()
+            ..FilterArgs::default()
         })
         .unwrap();
         assert!(fmin.matches(&entry));

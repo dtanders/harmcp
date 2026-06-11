@@ -9,7 +9,7 @@ use crate::output;
 
 pub fn run(file: &Path, args: &ListArgs, format: &OutputFormat) -> Result<()> {
     let columns = args.columns.clone().unwrap_or_else(Column::defaults);
-    let filters = Filters::from_args(args)?;
+    let filters = Filters::from_args(&args.filters)?;
     let reader = input::open(file)?;
     output::print_list_header(format, &columns);
     stream_entries(reader, |idx, entry| {
