@@ -92,6 +92,52 @@ pub fn print_detail_headers(entry: &Entry) {
     }
 }
 
+pub fn print_detail_info(entry: &Entry) {
+    println!("started:       {}", entry.started_date_time);
+    println!(
+        "status:        {} {}",
+        entry.response.status, entry.response.status_text
+    );
+    if let Some(ip) = &entry.server_ip_address {
+        println!("server ip:     {}", ip);
+    }
+    if let Some(c) = &entry.connection {
+        println!("connection:    {}", c);
+    }
+    if let Some(p) = &entry.pageref {
+        println!("page:          {}", p);
+    }
+    if !entry.response.redirect_url.is_empty() {
+        println!("redirect to:   {}", entry.response.redirect_url);
+    }
+    println!("req headers:   {}", fmt_size(entry.request.headers_size));
+    println!("req body:      {}", fmt_size(entry.request.body_size));
+    println!("resp headers:  {}", fmt_size(entry.response.headers_size));
+    println!(
+        "resp body:     {}  (on the wire)",
+        fmt_size(entry.response.body_size)
+    );
+    println!(
+        "content size:  {}  (decompressed)",
+        fmt_size(entry.response.content.size)
+    );
+    if !entry.request.query_string.is_empty() {
+        println!();
+        println!("=== Query Parameters ===");
+        for q in &entry.request.query_string {
+            println!("{} = {}", q.name, q.value);
+        }
+    }
+}
+
+fn fmt_size(size: i64) -> String {
+    if size < 0 {
+        "unknown".to_string()
+    } else {
+        format!("{} bytes", size)
+    }
+}
+
 pub fn print_detail_cookies(entry: &Entry) {
     println!("=== Request Cookies ===");
     print_cookie_list(&entry.request.cookies);
@@ -205,9 +251,15 @@ pub fn print_detail_stack(entry: &Entry) {
 
 pub fn print_detail_all(entry: &Entry, index: usize) {
     println!(
-        "Entry {}: {} {} => {}",
-        index, entry.request.method, entry.request.url, entry.response.status
+        "Entry {}: {} {} => {} {}",
+        index,
+        entry.request.method,
+        entry.request.url,
+        entry.response.status,
+        entry.response.status_text
     );
+    println!();
+    print_detail_info(entry);
     println!();
     print_detail_headers(entry);
     println!();

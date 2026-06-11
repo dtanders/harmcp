@@ -38,6 +38,9 @@ fn main() {
         Command::Cookies { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::Cookies, &cli.format)
         }
+        Command::Info { indices } => {
+            commands::detail::run(&cli.file, indices, DetailSection::Info, &cli.format)
+        }
         Command::All { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::All, &cli.format)
         }

@@ -234,3 +234,14 @@ fn cookies_command_shows_request_and_response_cookies() {
         .stdout(predicate::str::contains("abc123"))
         .stdout(predicate::str::contains("httpOnly"));
 }
+
+#[test]
+fn info_command_shows_metadata() {
+    harmcp(&["info", "0"])
+        .success()
+        .stdout(predicate::str::contains("2024-01-01T00:00:00.000Z"))
+        .stdout(predicate::str::contains("200 OK"))
+        .stdout(predicate::str::contains("93.184.216.34"))
+        .stdout(predicate::str::contains("page_1"))
+        .stdout(predicate::str::contains("limit = 10"));
+}

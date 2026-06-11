@@ -50,6 +50,26 @@ pub fn cookies_value(entry: &Entry) -> Value {
     })
 }
 
+pub fn info_value(entry: &Entry) -> Value {
+    json!({
+        "started": entry.started_date_time,
+        "status": entry.response.status,
+        "statusText": entry.response.status_text,
+        "serverIPAddress": entry.server_ip_address,
+        "connection": entry.connection,
+        "pageref": entry.pageref,
+        "redirectURL": if entry.response.redirect_url.is_empty() { Value::Null } else { json!(entry.response.redirect_url) },
+        "requestHeadersSize": entry.request.headers_size,
+        "requestBodySize": entry.request.body_size,
+        "responseHeadersSize": entry.response.headers_size,
+        "responseBodySize": entry.response.body_size,
+        "contentSize": entry.response.content.size,
+        "queryString": entry.request.query_string.iter()
+            .map(|q| json!({"name": q.name, "value": q.value}))
+            .collect::<Vec<_>>(),
+    })
+}
+
 pub fn body_value(entry: &Entry) -> Value {
     let (response_body, note) = match entry.response.content.decoded_body() {
         DecodedBody::None => (Value::Null, Value::Null),
@@ -107,6 +127,8 @@ pub fn all_value(entry: &Entry, index: usize) -> Value {
         "method": entry.request.method,
         "url": entry.request.url,
         "status": entry.response.status,
+        "statusText": entry.response.status_text,
+        "info": info_value(entry),
         "headers": headers_value(entry),
         "cookies": cookies_value(entry),
         "body": body_value(entry),

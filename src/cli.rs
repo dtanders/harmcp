@@ -49,6 +49,12 @@ pub enum Command {
         #[arg(num_args = 1.., required = true)]
         indices: Vec<usize>,
     },
+    /// Metadata for one or more entries: timestamp, status text, server IP,
+    /// redirect target, transfer sizes, query parameters
+    Info {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
     /// All details for one or more entries
     All {
         #[arg(num_args = 1.., required = true)]
