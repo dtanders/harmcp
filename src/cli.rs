@@ -111,6 +111,18 @@ pub struct FilterArgs {
     /// Maximum total entry time in milliseconds
     #[arg(long)]
     pub max_time: Option<f64>,
+    /// Exclude entries whose URL contains this substring (case-insensitive)
+    #[arg(long = "not-url")]
+    pub not_url: Option<String>,
+    /// Exclude entries whose MIME type contains this substring (case-insensitive)
+    #[arg(long = "not-mime")]
+    pub not_mime: Option<String>,
+    /// Exclude entries matching this status pattern (exact, wildcard, or range)
+    #[arg(long = "not-status")]
+    pub not_status: Option<String>,
+    /// Exclude entries with this HTTP method (case-insensitive)
+    #[arg(long = "not-method")]
+    pub not_method: Option<String>,
 }
 
 #[derive(Args)]

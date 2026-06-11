@@ -19,6 +19,10 @@ pub struct Filters {
     before: Option<DateTime<FixedOffset>>,
     min_time: Option<f64>,
     max_time: Option<f64>,
+    not_url: Option<String>,
+    not_mime: Option<String>,
+    not_status: Option<String>,
+    not_method: Option<String>,
 }
 
 impl Filters {
@@ -38,6 +42,10 @@ impl Filters {
             before: args.before.as_deref().map(parse_when).transpose()?,
             min_time: args.min_time,
             max_time: args.max_time,
+            not_url: args.not_url.as_deref().map(str::to_lowercase),
+            not_mime: args.not_mime.as_deref().map(str::to_lowercase),
+            not_status: args.not_status.clone(),
+            not_method: args.not_method.clone(),
         })
     }
 
@@ -88,6 +96,32 @@ impl Filters {
         }
         if self.exclude_css && is_css_mime(&entry.response.content.mime_type) {
             return false;
+        }
+        if let Some(u) = &self.not_url {
+            if entry.request.url.to_lowercase().contains(u.as_str()) {
+                return false;
+            }
+        }
+        if let Some(m) = &self.not_mime {
+            if entry
+                .response
+                .content
+                .mime_type
+                .to_lowercase()
+                .contains(m.as_str())
+            {
+                return false;
+            }
+        }
+        if let Some(s) = &self.not_status {
+            if matches_status(entry.response.status, s) {
+                return false;
+            }
+        }
+        if let Some(m) = &self.not_method {
+            if entry.request.method.eq_ignore_ascii_case(m) {
+                return false;
+            }
         }
         if let Some(min) = self.min_time {
             if entry.time < min {
@@ -402,6 +436,51 @@ mod tests {
             ..FilterArgs::default()
         })
         .is_err());
+    }
+
+    #[test]
+    fn not_url_excludes_substring_match() {
+        let telemetry = make_entry("GET", "https://example.com/telemetry/beacon", 200, "", 0);
+        let api = make_entry("GET", "https://example.com/api/users", 200, "", 0);
+        let f = Filters::from_args(&FilterArgs {
+            not_url: Some("Telemetry".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&telemetry));
+        assert!(f.matches(&api));
+    }
+
+    #[test]
+    fn not_mime_and_not_status_and_not_method() {
+        let e = make_entry("POST", "https://a.com", 404, "text/html", 0);
+        let f = Filters::from_args(&FilterArgs {
+            not_mime: Some("html".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
+        let f = Filters::from_args(&FilterArgs {
+            not_status: Some("4xx".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
+        let f = Filters::from_args(&FilterArgs {
+            not_method: Some("post".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&e));
+        let ok = make_entry("GET", "https://a.com", 200, "application/json", 0);
+        let f = Filters::from_args(&FilterArgs {
+            not_mime: Some("html".into()),
+            not_status: Some("4xx".into()),
+            not_method: Some("post".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&ok));
     }
 
     #[test]
