@@ -8,6 +8,7 @@ use crate::har::types::Entry;
 #[derive(Clone, Copy)]
 pub enum DetailSection {
     Headers,
+    Cookies,
     Body,
     Timings,
     Stack,
@@ -34,6 +35,7 @@ pub fn print_detail(format: &OutputFormat, entry: &Entry, index: usize, section:
     match format {
         OutputFormat::Table => match section {
             DetailSection::Headers => table::print_detail_headers(entry),
+            DetailSection::Cookies => table::print_detail_cookies(entry),
             DetailSection::Body => table::print_detail_body(entry),
             DetailSection::Timings => table::print_detail_timings(entry),
             DetailSection::Stack => table::print_detail_stack(entry),
@@ -42,6 +44,7 @@ pub fn print_detail(format: &OutputFormat, entry: &Entry, index: usize, section:
         OutputFormat::Tsv | OutputFormat::Json => {
             let value = match section {
                 DetailSection::Headers => json::headers_value(entry),
+                DetailSection::Cookies => json::cookies_value(entry),
                 DetailSection::Body => json::body_value(entry),
                 DetailSection::Timings => json::timings_value(entry),
                 DetailSection::Stack => json::stack_value(entry),

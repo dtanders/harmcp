@@ -225,3 +225,12 @@ fn body_output_rejects_multiple_indices() {
         .failure()
         .stderr(predicate::str::contains("single index"));
 }
+
+#[test]
+fn cookies_command_shows_request_and_response_cookies() {
+    harmcp(&["cookies", "0"])
+        .success()
+        .stdout(predicate::str::contains("session"))
+        .stdout(predicate::str::contains("abc123"))
+        .stdout(predicate::str::contains("httpOnly"));
+}

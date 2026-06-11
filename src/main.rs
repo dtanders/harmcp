@@ -35,6 +35,9 @@ fn main() {
         Command::Stack { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::Stack, &cli.format)
         }
+        Command::Cookies { indices } => {
+            commands::detail::run(&cli.file, indices, DetailSection::Cookies, &cli.format)
+        }
         Command::All { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::All, &cli.format)
         }

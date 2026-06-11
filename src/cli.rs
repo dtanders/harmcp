@@ -44,6 +44,11 @@ pub enum Command {
         #[arg(num_args = 1.., required = true)]
         indices: Vec<usize>,
     },
+    /// Request and response cookies for one or more entries
+    Cookies {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
     /// All details for one or more entries
     All {
         #[arg(num_args = 1.., required = true)]

@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 
 use crate::cli::Column;
-use crate::har::types::{DecodedBody, Entry};
+use crate::har::types::{Cookie, DecodedBody, Entry};
 
 pub fn list_row_value(entry: &Entry, index: usize, columns: &[Column]) -> Value {
     let mut map = serde_json::Map::new();
@@ -28,6 +28,25 @@ pub fn headers_value(entry: &Entry) -> Value {
         "responseHeaders": entry.response.headers.iter()
             .map(|h| json!({"name": h.name, "value": h.value}))
             .collect::<Vec<_>>(),
+    })
+}
+
+fn cookie_json(c: &Cookie) -> Value {
+    json!({
+        "name": c.name,
+        "value": c.value,
+        "domain": c.domain,
+        "path": c.path,
+        "expires": c.expires,
+        "httpOnly": c.http_only,
+        "secure": c.secure,
+    })
+}
+
+pub fn cookies_value(entry: &Entry) -> Value {
+    json!({
+        "requestCookies": entry.request.cookies.iter().map(cookie_json).collect::<Vec<_>>(),
+        "responseCookies": entry.response.cookies.iter().map(cookie_json).collect::<Vec<_>>(),
     })
 }
 
@@ -89,6 +108,7 @@ pub fn all_value(entry: &Entry, index: usize) -> Value {
         "url": entry.request.url,
         "status": entry.response.status,
         "headers": headers_value(entry),
+        "cookies": cookies_value(entry),
         "body": body_value(entry),
         "timings": timings_value(entry),
         "stack": stack_value(entry),

@@ -1,5 +1,5 @@
 use crate::cli::Column;
-use crate::har::types::{DecodedBody, Entry};
+use crate::har::types::{Cookie, DecodedBody, Entry};
 
 const URL_MAX: usize = 60;
 
@@ -92,6 +92,45 @@ pub fn print_detail_headers(entry: &Entry) {
     }
 }
 
+pub fn print_detail_cookies(entry: &Entry) {
+    println!("=== Request Cookies ===");
+    print_cookie_list(&entry.request.cookies);
+    println!();
+    println!("=== Response Cookies ===");
+    print_cookie_list(&entry.response.cookies);
+}
+
+fn print_cookie_list(cookies: &[Cookie]) {
+    if cookies.is_empty() {
+        println!("(none)");
+        return;
+    }
+    for c in cookies {
+        let mut attrs = Vec::new();
+        if let Some(d) = &c.domain {
+            attrs.push(format!("domain={d}"));
+        }
+        if let Some(p) = &c.path {
+            attrs.push(format!("path={p}"));
+        }
+        if let Some(e) = &c.expires {
+            attrs.push(format!("expires={e}"));
+        }
+        if c.http_only == Some(true) {
+            attrs.push("httpOnly".to_string());
+        }
+        if c.secure == Some(true) {
+            attrs.push("secure".to_string());
+        }
+        let suffix = if attrs.is_empty() {
+            String::new()
+        } else {
+            format!("  [{}]", attrs.join("; "))
+        };
+        println!("{}: {}{}", c.name, c.value, suffix);
+    }
+}
+
 pub fn print_detail_body(entry: &Entry) {
     println!("=== Request Body ===");
     match entry
@@ -171,6 +210,8 @@ pub fn print_detail_all(entry: &Entry, index: usize) {
     );
     println!();
     print_detail_headers(entry);
+    println!();
+    print_detail_cookies(entry);
     println!();
     print_detail_body(entry);
     println!();
