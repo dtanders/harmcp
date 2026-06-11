@@ -249,6 +249,25 @@ pub fn print_detail_stack(entry: &Entry) {
     }
 }
 
+pub fn print_detail_ws(entry: &Entry) {
+    match entry.websocket_messages.as_deref() {
+        None | Some([]) => println!("(no websocket messages)"),
+        Some(msgs) => {
+            for m in msgs {
+                let dir = match m.message_type.as_str() {
+                    "send" => "-> send",
+                    "receive" => "<- recv",
+                    other => other,
+                };
+                println!(
+                    "[{:>14.3}] {} (opcode {}): {}",
+                    m.time, dir, m.opcode, m.data
+                );
+            }
+        }
+    }
+}
+
 pub fn print_detail_all(entry: &Entry, index: usize) {
     println!(
         "Entry {}: {} {} => {} {}",
@@ -270,6 +289,15 @@ pub fn print_detail_all(entry: &Entry, index: usize) {
     print_detail_timings(entry);
     println!();
     print_detail_stack(entry);
+    if entry
+        .websocket_messages
+        .as_deref()
+        .map_or(false, |m| !m.is_empty())
+    {
+        println!();
+        println!("=== WebSocket Messages ===");
+        print_detail_ws(entry);
+    }
 }
 
 #[cfg(test)]

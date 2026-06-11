@@ -41,6 +41,9 @@ fn main() {
         Command::Info { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::Info, &cli.format)
         }
+        Command::Ws { indices } => {
+            commands::detail::run(&cli.file, indices, DetailSection::Ws, &cli.format)
+        }
         Command::All { indices } => {
             commands::detail::run(&cli.file, indices, DetailSection::All, &cli.format)
         }

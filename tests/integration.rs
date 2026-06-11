@@ -245,3 +245,19 @@ fn info_command_shows_metadata() {
         .stdout(predicate::str::contains("page_1"))
         .stdout(predicate::str::contains("limit = 10"));
 }
+
+#[test]
+fn ws_command_shows_messages() {
+    harmcp(&["ws", "3"])
+        .success()
+        .stdout(predicate::str::contains("send"))
+        .stdout(predicate::str::contains("subscribe"))
+        .stdout(predicate::str::contains("recv"));
+}
+
+#[test]
+fn ws_command_on_non_ws_entry_says_none() {
+    harmcp(&["ws", "0"])
+        .success()
+        .stdout(predicate::str::contains("no websocket messages"));
+}

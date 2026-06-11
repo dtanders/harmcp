@@ -55,6 +55,11 @@ pub enum Command {
         #[arg(num_args = 1.., required = true)]
         indices: Vec<usize>,
     },
+    /// WebSocket messages for one or more entries (Chrome _webSocketMessages)
+    Ws {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
     /// All details for one or more entries
     All {
         #[arg(num_args = 1.., required = true)]

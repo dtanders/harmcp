@@ -121,6 +121,21 @@ pub fn stack_value(entry: &Entry) -> Value {
     }
 }
 
+pub fn ws_value(entry: &Entry) -> Value {
+    match &entry.websocket_messages {
+        None => json!(null),
+        Some(msgs) => json!(msgs
+            .iter()
+            .map(|m| json!({
+                "type": m.message_type,
+                "time": m.time,
+                "opcode": m.opcode,
+                "data": m.data,
+            }))
+            .collect::<Vec<_>>()),
+    }
+}
+
 pub fn all_value(entry: &Entry, index: usize) -> Value {
     json!({
         "index": index,
@@ -134,5 +149,6 @@ pub fn all_value(entry: &Entry, index: usize) -> Value {
         "body": body_value(entry),
         "timings": timings_value(entry),
         "stack": stack_value(entry),
+        "webSocketMessages": ws_value(entry),
     })
 }

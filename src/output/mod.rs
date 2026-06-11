@@ -13,6 +13,7 @@ pub enum DetailSection {
     Body,
     Timings,
     Stack,
+    Ws,
     All,
 }
 
@@ -41,6 +42,7 @@ pub fn print_detail(format: &OutputFormat, entry: &Entry, index: usize, section:
             DetailSection::Body => table::print_detail_body(entry),
             DetailSection::Timings => table::print_detail_timings(entry),
             DetailSection::Stack => table::print_detail_stack(entry),
+            DetailSection::Ws => table::print_detail_ws(entry),
             DetailSection::All => table::print_detail_all(entry, index),
         },
         OutputFormat::Tsv | OutputFormat::Json => {
@@ -51,6 +53,7 @@ pub fn print_detail(format: &OutputFormat, entry: &Entry, index: usize, section:
                 DetailSection::Body => json::body_value(entry),
                 DetailSection::Timings => json::timings_value(entry),
                 DetailSection::Stack => json::stack_value(entry),
+                DetailSection::Ws => json::ws_value(entry),
                 DetailSection::All => json::all_value(entry, index),
             };
             println!("{}", value);
