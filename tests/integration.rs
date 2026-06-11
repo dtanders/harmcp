@@ -261,3 +261,24 @@ fn ws_command_on_non_ws_entry_says_none() {
         .success()
         .stdout(predicate::str::contains("no websocket messages"));
 }
+
+#[test]
+fn list_after_filter_and_start_column() {
+    let out = harmcp(&[
+        "list",
+        "--after",
+        "2024-01-01T00:00:01.500Z",
+        "--columns",
+        "index,url,start",
+    ])
+    .success()
+    .get_output()
+    .stdout
+    .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).collect();
+    // entries 2 and 3 start at 00:00:02 and 00:00:03, which are after 00:00:01.500
+    assert!(data_rows.iter().any(|l| l.contains("logo.png")));
+    assert!(!data_rows.iter().any(|l| l.contains("api/users")));
+    assert!(data_rows.iter().any(|l| l.contains("2024-01-01T00:00:02")));
+}

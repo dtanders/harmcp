@@ -14,6 +14,7 @@ pub fn list_row_value(entry: &Entry, index: usize, columns: &[Column]) -> Value 
             Column::Mime => ("mime", json!(entry.response.content.mime_type)),
             Column::Size => ("size", json!(entry.response.content.size)),
             Column::Time => ("time_ms", json!(entry.time)),
+            Column::Start => ("started", json!(entry.started_date_time)),
         };
         map.insert(k.to_string(), v);
     }

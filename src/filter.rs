@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use regex::Regex;
 
 use crate::cli::FilterArgs;
@@ -14,6 +15,8 @@ pub struct Filters {
     max_size: Option<i64>,
     exclude_media: bool,
     exclude_css: bool,
+    after: Option<DateTime<FixedOffset>>,
+    before: Option<DateTime<FixedOffset>>,
 }
 
 impl Filters {
@@ -29,6 +32,8 @@ impl Filters {
             max_size: args.max_size,
             exclude_media: args.no_media || args.no_assets,
             exclude_css: args.no_css || args.no_assets,
+            after: args.after.as_deref().map(parse_when).transpose()?,
+            before: args.before.as_deref().map(parse_when).transpose()?,
         })
     }
 
@@ -80,6 +85,23 @@ impl Filters {
         if self.exclude_css && is_css_mime(&entry.response.content.mime_type) {
             return false;
         }
+        if self.after.is_some() || self.before.is_some() {
+            match DateTime::parse_from_rfc3339(&entry.started_date_time) {
+                Err(_) => return false,
+                Ok(started) => {
+                    if let Some(a) = self.after {
+                        if started < a {
+                            return false;
+                        }
+                    }
+                    if let Some(b) = self.before {
+                        if started >= b {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
         true
     }
 }
@@ -96,6 +118,22 @@ fn is_media_mime(mime: &str) -> bool {
 
 fn is_css_mime(mime: &str) -> bool {
     mime.to_ascii_lowercase().starts_with("text/css")
+}
+
+fn parse_when(s: &str) -> crate::error::Result<DateTime<FixedOffset>> {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return Ok(dt);
+    }
+    if let Ok(d) = NaiveDate::parse_from_str(s, "%Y-%m-%d") {
+        let midnight = d.and_hms_opt(0, 0, 0).expect("00:00:00 is valid");
+        return Ok(DateTime::from_naive_utc_and_offset(
+            midnight,
+            FixedOffset::east_opt(0).expect("UTC offset is valid"),
+        ));
+    }
+    Err(crate::error::HarError::Usage(format!(
+        "invalid date '{s}': use RFC 3339 (2024-01-01T12:00:00Z) or YYYY-MM-DD"
+    )))
 }
 
 fn matches_status(status: u16, pattern: &str) -> bool {
@@ -305,5 +343,50 @@ mod tests {
         .unwrap();
         assert!(fmin.matches(&entry));
         assert!(!fmax.matches(&entry));
+    }
+
+    #[test]
+    fn after_and_before_filter_by_started_date() {
+        let mut early = make_entry("GET", "", 200, "", 0);
+        early.started_date_time = "2024-01-01T00:00:00.000Z".to_string();
+        let mut late = make_entry("GET", "", 200, "", 0);
+        late.started_date_time = "2024-01-01T00:00:05.000Z".to_string();
+
+        let f = Filters::from_args(&FilterArgs {
+            after: Some("2024-01-01T00:00:02Z".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f.matches(&early));
+        assert!(f.matches(&late));
+
+        let f2 = Filters::from_args(&FilterArgs {
+            before: Some("2024-01-01T00:00:02Z".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f2.matches(&early));
+        assert!(!f2.matches(&late));
+    }
+
+    #[test]
+    fn date_only_shorthand_accepted() {
+        let mut e = make_entry("GET", "", 200, "", 0);
+        e.started_date_time = "2024-06-15T10:00:00.000Z".to_string();
+        let f = Filters::from_args(&FilterArgs {
+            after: Some("2024-06-01".into()),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&e));
+    }
+
+    #[test]
+    fn invalid_date_is_an_error() {
+        assert!(Filters::from_args(&FilterArgs {
+            after: Some("yesterday".into()),
+            ..FilterArgs::default()
+        })
+        .is_err());
     }
 }

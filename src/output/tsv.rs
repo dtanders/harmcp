@@ -26,6 +26,7 @@ fn column_name(col: &Column) -> &'static str {
         Column::Mime => "mime",
         Column::Size => "size",
         Column::Time => "time_ms",
+        Column::Start => "started",
     }
 }
 
@@ -38,6 +39,7 @@ fn column_value(col: &Column, entry: &Entry, index: usize) -> String {
         Column::Mime => entry.response.content.mime_type.clone(),
         Column::Size => entry.response.content.size.to_string(),
         Column::Time => format!("{:.1}", entry.time),
+        Column::Start => entry.started_date_time.clone(),
     }
 }
 

@@ -45,6 +45,7 @@ fn column_header(col: &Column) -> String {
         Column::Mime => "MIME".to_string(),
         Column::Size => "SIZE".to_string(),
         Column::Time => "TIME(ms)".to_string(),
+        Column::Start => "STARTED".to_string(),
     }
 }
 
@@ -57,6 +58,7 @@ fn column_width(col: &Column) -> usize {
         Column::Mime => 30,
         Column::Size => 10,
         Column::Time => 9,
+        Column::Start => 24,
     }
 }
 
@@ -69,6 +71,7 @@ fn column_value(col: &Column, entry: &Entry, index: usize) -> String {
         Column::Mime => entry.response.content.mime_type.clone(),
         Column::Size => entry.response.content.size.to_string(),
         Column::Time => format!("{:.1}", entry.time),
+        Column::Start => entry.started_date_time.clone(),
     }
 }
 

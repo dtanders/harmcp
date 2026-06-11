@@ -99,6 +99,12 @@ pub struct FilterArgs {
     /// Exclude media and CSS responses (shorthand for --no-media --no-css)
     #[arg(long = "no-assets")]
     pub no_assets: bool,
+    /// Only entries started at or after this time (RFC 3339 or YYYY-MM-DD)
+    #[arg(long)]
+    pub after: Option<String>,
+    /// Only entries started before this time (RFC 3339 or YYYY-MM-DD)
+    #[arg(long)]
+    pub before: Option<String>,
 }
 
 #[derive(Args)]
@@ -127,6 +133,7 @@ pub enum Column {
     Mime,
     Size,
     Time,
+    Start,
 }
 
 impl Column {
