@@ -48,11 +48,15 @@ impl Filters {
             not_mime: args.not_mime.as_deref().map(str::to_lowercase),
             not_status: args.not_status.clone(),
             not_method: args.not_method.clone(),
-            header: args.header.iter().map(|s| parse_header_filter(s)).collect(),
+            header: args
+                .header
+                .iter()
+                .map(|s| parse_header_filter(s.as_str()))
+                .collect(),
             resp_header: args
                 .resp_header
                 .iter()
-                .map(|s| parse_header_filter(s))
+                .map(|s| parse_header_filter(s.as_str()))
                 .collect(),
         })
     }

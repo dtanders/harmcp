@@ -58,7 +58,7 @@ fn column_width(col: &Column) -> usize {
         Column::Mime => 30,
         Column::Size => 10,
         Column::Time => 9,
-        Column::Start => 24,
+        Column::Start => 30,
     }
 }
 
