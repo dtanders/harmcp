@@ -179,6 +179,15 @@ pub struct CallFrame {
     pub column_number: Option<u32>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Page {
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(rename = "startedDateTime", default)]
+    pub started_date_time: String,
+}
+
 /// Shared test-entry builder. Tests mutate fields as needed.
 #[cfg(test)]
 pub fn test_entry() -> Entry {

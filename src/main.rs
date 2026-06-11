@@ -48,6 +48,7 @@ fn main() {
             commands::detail::run(&cli.file, indices, DetailSection::All, &cli.format)
         }
         Command::Summary(args) => commands::summary::run(&cli.file, args, &cli.format),
+        Command::Pages => commands::pages::run(&cli.file, &cli.format),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

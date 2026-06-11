@@ -1,9 +1,9 @@
+use serde::de::{DeserializeSeed, Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use std::fmt;
 use std::io::Read;
-use serde::de::{DeserializeSeed, Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 
 use crate::error::Result;
-use crate::har::types::Entry;
+use crate::har::types::{Entry, Page};
 
 /// Call `f(index, entry)` for each entry in the HAR `reader`.
 /// `f` returns `Ok(true)` to continue, `Ok(false)` to stop early.
@@ -161,6 +161,64 @@ where
     }
 }
 
+/// Collect `log.pages`. Returns an empty vec when the key is absent.
+pub fn stream_pages<R: Read>(reader: R) -> Result<Vec<Page>> {
+    let mut de = serde_json::Deserializer::from_reader(reader);
+    let pages = de.deserialize_map(PagesRootVisitor)?;
+    Ok(pages)
+}
+
+struct PagesRootVisitor;
+
+impl<'de> Visitor<'de> for PagesRootVisitor {
+    type Value = Vec<Page>;
+    fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str("a HAR root object")
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> std::result::Result<Vec<Page>, A::Error> {
+        let mut pages: Option<Vec<Page>> = None;
+        while let Some(key) = map.next_key::<String>()? {
+            if key == "log" {
+                pages = Some(map.next_value_seed(PagesLogSeed)?);
+            } else {
+                map.next_value::<IgnoredAny>()?;
+            }
+        }
+        pages.ok_or_else(|| {
+            serde::de::Error::custom("not a HAR file: missing top-level \"log\" key")
+        })
+    }
+}
+
+struct PagesLogSeed;
+
+impl<'de> DeserializeSeed<'de> for PagesLogSeed {
+    type Value = Vec<Page>;
+    fn deserialize<D: Deserializer<'de>>(self, d: D) -> std::result::Result<Vec<Page>, D::Error> {
+        d.deserialize_map(PagesLogVisitor)
+    }
+}
+
+struct PagesLogVisitor;
+
+impl<'de> Visitor<'de> for PagesLogVisitor {
+    type Value = Vec<Page>;
+    fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str("a HAR log object")
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> std::result::Result<Vec<Page>, A::Error> {
+        let mut pages: Option<Vec<Page>> = None;
+        while let Some(key) = map.next_key::<String>()? {
+            if key == "pages" {
+                pages = Some(map.next_value::<Vec<Page>>()?);
+            } else {
+                map.next_value::<IgnoredAny>()?;
+            }
+        }
+        Ok(pages.unwrap_or_default())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,5 +290,29 @@ mod tests {
     fn missing_log_key_returns_error() {
         let result = stream_entries(br#"{"other": {}}"# as &[u8], |_, _| Ok(true));
         assert!(result.is_err());
+    }
+
+    const HAR_WITH_PAGES: &str = r#"{
+        "log": {
+            "version": "1.2",
+            "pages": [
+                {"startedDateTime": "2024-01-01T00:00:00.000Z", "id": "page_1", "title": "Home"}
+            ],
+            "entries": []
+        }
+    }"#;
+
+    #[test]
+    fn stream_pages_returns_pages() {
+        let pages = stream_pages(HAR_WITH_PAGES.as_bytes()).unwrap();
+        assert_eq!(pages.len(), 1);
+        assert_eq!(pages[0].id, "page_1");
+        assert_eq!(pages[0].title, "Home");
+    }
+
+    #[test]
+    fn stream_pages_empty_when_absent() {
+        let pages = stream_pages(TWO_ENTRY_HAR.as_bytes()).unwrap();
+        assert!(pages.is_empty());
     }
 }

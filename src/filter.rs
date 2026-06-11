@@ -25,6 +25,7 @@ pub struct Filters {
     not_method: Option<String>,
     header: Vec<(String, Option<String>)>,
     resp_header: Vec<(String, Option<String>)>,
+    page: Option<String>,
 }
 
 impl Filters {
@@ -58,6 +59,7 @@ impl Filters {
                 .iter()
                 .map(|s| parse_header_filter(s.as_str()))
                 .collect(),
+            page: args.page.clone(),
         })
     }
 
@@ -150,6 +152,11 @@ impl Filters {
         }
         if !headers_match(&entry.response.headers, &self.resp_header) {
             return false;
+        }
+        if let Some(p) = &self.page {
+            if entry.pageref.as_deref() != Some(p.as_str()) {
+                return false;
+            }
         }
         if self.after.is_some() || self.before.is_some() {
             match DateTime::parse_from_rfc3339(&entry.started_date_time) {

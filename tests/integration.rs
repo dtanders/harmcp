@@ -354,6 +354,27 @@ fn summary_respects_filters() {
 }
 
 #[test]
+fn pages_command_lists_pages() {
+    harmcp(&["pages"])
+        .success()
+        .stdout(predicate::str::contains("page_1"))
+        .stdout(predicate::str::contains("Example Dashboard"));
+}
+
+#[test]
+fn list_page_filter() {
+    let out = harmcp(&["list", "--page", "page_1"])
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    let data_rows: Vec<&str> = s.lines().skip(2).collect();
+    assert!(data_rows.iter().any(|l| l.contains("api/users"))); // entry 0 has pageref page_1
+    assert!(!data_rows.iter().any(|l| l.contains("login"))); // entry 1 has no pageref
+}
+
+#[test]
 fn list_sort_time_desc_puts_slowest_first() {
     let out = harmcp(&["--format", "tsv", "list", "--sort", "time", "--desc"])
         .success()

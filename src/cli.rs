@@ -67,6 +67,8 @@ pub enum Command {
     },
     /// Aggregate statistics for the file (respects all filter flags)
     Summary(FilterArgs),
+    /// List the pages recorded in the HAR (id, start time, title)
+    Pages,
 }
 
 #[derive(Args, Default)]
@@ -131,6 +133,9 @@ pub struct FilterArgs {
     /// Keep entries with this response header: NAME or NAME=VALUE-substring (repeatable)
     #[arg(long = "resp-header")]
     pub resp_header: Vec<String>,
+    /// Only entries belonging to this page id (see the pages command)
+    #[arg(long)]
+    pub page: Option<String>,
 }
 
 #[derive(Args)]
