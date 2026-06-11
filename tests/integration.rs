@@ -179,3 +179,19 @@ fn stdin_input_with_dash() {
         .success()
         .stdout(predicate::str::contains("api/users"));
 }
+
+#[test]
+fn detail_accepts_multiple_indices() {
+    harmcp(&["headers", "0", "1"])
+        .success()
+        .stdout(predicate::str::contains("Accept")) // entry 0 request header
+        .stdout(predicate::str::contains("Content-Type")); // entry 1 request header
+}
+
+#[test]
+fn detail_multiple_indices_one_missing_fails_after_printing_found() {
+    harmcp(&["headers", "0", "99"])
+        .failure()
+        .stdout(predicate::str::contains("Accept"))
+        .stderr(predicate::str::contains("not found"));
+}

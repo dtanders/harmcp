@@ -21,16 +21,31 @@ pub struct Cli {
 pub enum Command {
     /// List all entries with optional filtering and column selection
     List(ListArgs),
-    /// Request and response headers for entry N
-    Headers { index: usize },
-    /// Request payload and response body for entry N
-    Body { index: usize },
-    /// Timing breakdown for entry N
-    Timings { index: usize },
-    /// Initiator call stack for entry N
-    Stack { index: usize },
-    /// All details for entry N
-    All { index: usize },
+    /// Request and response headers for one or more entries
+    Headers {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
+    /// Request payload and response body for one or more entries
+    Body {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
+    /// Timing breakdown for one or more entries
+    Timings {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
+    /// Initiator call stack for one or more entries
+    Stack {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
+    /// All details for one or more entries
+    All {
+        #[arg(num_args = 1.., required = true)]
+        indices: Vec<usize>,
+    },
 }
 
 #[derive(Args)]
