@@ -18,11 +18,7 @@ pub struct Filters {
 
 impl Filters {
     pub fn from_args(args: &ListArgs) -> Result<Self> {
-        let url_regex = args
-            .url_regex
-            .as_deref()
-            .map(Regex::new)
-            .transpose()?;
+        let url_regex = args.url_regex.as_deref().map(Regex::new).transpose()?;
         Ok(Self {
             method: args.method.clone(),
             status: args.status.clone(),
@@ -58,7 +54,13 @@ impl Filters {
             }
         }
         if let Some(m) = &self.mime {
-            if !entry.response.content.mime_type.to_lowercase().contains(m.as_str()) {
+            if !entry
+                .response
+                .content
+                .mime_type
+                .to_lowercase()
+                .contains(m.as_str())
+            {
                 return false;
             }
         }
@@ -122,35 +124,13 @@ mod tests {
     use crate::har::types::*;
 
     fn make_entry(method: &str, url: &str, status: u16, mime: &str, size: i64) -> Entry {
-        Entry {
-            started_date_time: String::new(),
-            time: 100.0,
-            request: Request {
-                method: method.to_string(),
-                url: url.to_string(),
-                headers: vec![],
-                post_data: None,
-            },
-            response: Response {
-                status,
-                status_text: String::new(),
-                headers: vec![],
-                content: Content {
-                    size,
-                    mime_type: mime.to_string(),
-                    text: None,
-                },
-            },
-            timings: Timings {
-                blocked: None,
-                dns: None,
-                connect: None,
-                send: 1.0,
-                wait: 90.0,
-                receive: 9.0,
-            },
-            initiator: None,
-        }
+        let mut e = crate::har::types::test_entry();
+        e.request.method = method.to_string();
+        e.request.url = url.to_string();
+        e.response.status = status;
+        e.response.content.mime_type = mime.to_string();
+        e.response.content.size = size;
+        e
     }
 
     fn no_filters() -> ListArgs {
@@ -179,18 +159,34 @@ mod tests {
     #[test]
     fn method_filter_case_insensitive() {
         let entry = make_entry("GET", "https://a.com", 200, "text/html", 100);
-        let f = Filters::from_args(&ListArgs { method: Some("get".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            method: Some("get".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(f.matches(&entry));
-        let f2 = Filters::from_args(&ListArgs { method: Some("POST".into()), ..no_filters() }).unwrap();
+        let f2 = Filters::from_args(&ListArgs {
+            method: Some("POST".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(!f2.matches(&entry));
     }
 
     #[test]
     fn status_exact_match() {
         let entry = make_entry("GET", "", 200, "", 0);
-        let f = Filters::from_args(&ListArgs { status: Some("200".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            status: Some("200".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(f.matches(&entry));
-        let f2 = Filters::from_args(&ListArgs { status: Some("404".into()), ..no_filters() }).unwrap();
+        let f2 = Filters::from_args(&ListArgs {
+            status: Some("404".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(!f2.matches(&entry));
     }
 
@@ -198,7 +194,11 @@ mod tests {
     fn status_wildcard_4xx() {
         let ok = make_entry("GET", "", 200, "", 0);
         let err = make_entry("GET", "", 404, "", 0);
-        let f = Filters::from_args(&ListArgs { status: Some("4xx".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            status: Some("4xx".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(!f.matches(&ok));
         assert!(f.matches(&err));
     }
@@ -206,7 +206,11 @@ mod tests {
     #[test]
     fn status_range() {
         let entry = make_entry("GET", "", 201, "", 0);
-        let f = Filters::from_args(&ListArgs { status: Some("200-299".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            status: Some("200-299".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(f.matches(&entry));
         let err = make_entry("GET", "", 404, "", 0);
         assert!(!f.matches(&err));
@@ -215,14 +219,22 @@ mod tests {
     #[test]
     fn url_substring_case_insensitive() {
         let entry = make_entry("GET", "https://EXAMPLE.com/API/users", 200, "", 0);
-        let f = Filters::from_args(&ListArgs { url: Some("api".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            url: Some("api".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(f.matches(&entry));
     }
 
     #[test]
     fn mime_substring() {
         let entry = make_entry("GET", "", 200, "application/json; charset=utf-8", 0);
-        let f = Filters::from_args(&ListArgs { mime: Some("json".into()), ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            mime: Some("json".into()),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(f.matches(&entry));
     }
 
@@ -245,9 +257,24 @@ mod tests {
 
     #[test]
     fn no_media_excludes_image_video_audio_font() {
-        let f = Filters::from_args(&ListArgs { no_media: true, ..no_filters() }).unwrap();
-        for mime in &["image/png", "image/svg+xml", "video/mp4", "audio/mpeg", "font/woff2", "application/font-woff", "application/x-font-ttf"] {
-            assert!(!f.matches(&make_entry("GET", "", 200, mime, 0)), "should exclude {mime}");
+        let f = Filters::from_args(&ListArgs {
+            no_media: true,
+            ..no_filters()
+        })
+        .unwrap();
+        for mime in &[
+            "image/png",
+            "image/svg+xml",
+            "video/mp4",
+            "audio/mpeg",
+            "font/woff2",
+            "application/font-woff",
+            "application/x-font-ttf",
+        ] {
+            assert!(
+                !f.matches(&make_entry("GET", "", 200, mime, 0)),
+                "should exclude {mime}"
+            );
         }
         assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
         assert!(f.matches(&make_entry("GET", "", 200, "text/css", 0)));
@@ -255,7 +282,11 @@ mod tests {
 
     #[test]
     fn no_css_excludes_css_only() {
-        let f = Filters::from_args(&ListArgs { no_css: true, ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            no_css: true,
+            ..no_filters()
+        })
+        .unwrap();
         assert!(!f.matches(&make_entry("GET", "", 200, "text/css", 0)));
         assert!(!f.matches(&make_entry("GET", "", 200, "text/css; charset=utf-8", 0)));
         assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
@@ -264,7 +295,11 @@ mod tests {
 
     #[test]
     fn no_assets_excludes_both_media_and_css() {
-        let f = Filters::from_args(&ListArgs { no_assets: true, ..no_filters() }).unwrap();
+        let f = Filters::from_args(&ListArgs {
+            no_assets: true,
+            ..no_filters()
+        })
+        .unwrap();
         assert!(!f.matches(&make_entry("GET", "", 200, "image/png", 0)));
         assert!(!f.matches(&make_entry("GET", "", 200, "text/css", 0)));
         assert!(f.matches(&make_entry("GET", "", 200, "application/json", 0)));
@@ -274,8 +309,16 @@ mod tests {
     #[test]
     fn size_min_max() {
         let entry = make_entry("GET", "", 200, "", 500);
-        let fmin = Filters::from_args(&ListArgs { min_size: Some(100), ..no_filters() }).unwrap();
-        let fmax = Filters::from_args(&ListArgs { max_size: Some(100), ..no_filters() }).unwrap();
+        let fmin = Filters::from_args(&ListArgs {
+            min_size: Some(100),
+            ..no_filters()
+        })
+        .unwrap();
+        let fmax = Filters::from_args(&ListArgs {
+            max_size: Some(100),
+            ..no_filters()
+        })
+        .unwrap();
         assert!(fmin.matches(&entry));
         assert!(!fmax.matches(&entry));
     }

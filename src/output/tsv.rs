@@ -2,7 +2,11 @@ use crate::cli::Column;
 use crate::har::types::Entry;
 
 pub fn list_header(columns: &[Column]) -> String {
-    columns.iter().map(column_name).collect::<Vec<_>>().join("\t")
+    columns
+        .iter()
+        .map(column_name)
+        .collect::<Vec<_>>()
+        .join("\t")
 }
 
 pub fn list_row(entry: &Entry, index: usize, columns: &[Column]) -> String {
@@ -44,35 +48,12 @@ mod tests {
     use crate::har::types::*;
 
     fn sample_entry() -> Entry {
-        Entry {
-            started_date_time: String::new(),
-            time: 123.4,
-            request: Request {
-                method: "GET".to_string(),
-                url: "https://example.com/api".to_string(),
-                headers: vec![],
-                post_data: None,
-            },
-            response: Response {
-                status: 200,
-                status_text: "OK".to_string(),
-                headers: vec![],
-                content: Content {
-                    size: 512,
-                    mime_type: "application/json".to_string(),
-                    text: None,
-                },
-            },
-            timings: Timings {
-                blocked: None,
-                dns: None,
-                connect: None,
-                send: 0.5,
-                wait: 100.0,
-                receive: 16.9,
-            },
-            initiator: None,
-        }
+        let mut e = crate::har::types::test_entry();
+        e.time = 123.4;
+        e.timings.send = 0.5;
+        e.timings.wait = 100.0;
+        e.timings.receive = 16.9;
+        e
     }
 
     #[test]

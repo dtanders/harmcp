@@ -94,7 +94,12 @@ pub fn print_detail_headers(entry: &Entry) {
 
 pub fn print_detail_body(entry: &Entry) {
     println!("=== Request Body ===");
-    match entry.request.post_data.as_ref().and_then(|p| p.text.as_deref()) {
+    match entry
+        .request
+        .post_data
+        .as_ref()
+        .and_then(|p| p.text.as_deref())
+    {
         Some(text) => println!("{}", text),
         None => println!("(none)"),
     }
@@ -169,51 +174,45 @@ mod tests {
     use crate::har::types::*;
 
     fn sample_entry() -> Entry {
-        Entry {
-            started_date_time: String::new(),
-            time: 55.5,
-            request: Request {
-                method: "POST".to_string(),
-                url: "https://example.com/submit".to_string(),
-                headers: vec![Header {
-                    name: "Authorization".to_string(),
-                    value: "Bearer tok".to_string(),
+        let mut e = crate::har::types::test_entry();
+        e.time = 55.5;
+        e.request.method = "POST".to_string();
+        e.request.url = "https://example.com/submit".to_string();
+        e.request.headers = vec![Header {
+            name: "Authorization".to_string(),
+            value: "Bearer tok".to_string(),
+        }];
+        e.request.post_data = Some(PostData {
+            text: Some(r#"{"x":1}"#.to_string()),
+        });
+        e.response.status = 201;
+        e.response.status_text = "Created".to_string();
+        e.response.headers = vec![Header {
+            name: "Content-Type".to_string(),
+            value: "application/json".to_string(),
+        }];
+        e.response.content.size = 128;
+        e.response.content.text = Some(r#"{"id":42}"#.to_string());
+        e.timings = Timings {
+            blocked: Some(1.0),
+            dns: Some(2.0),
+            connect: Some(3.0),
+            send: 1.0,
+            wait: 50.0,
+            receive: 4.5,
+        };
+        e.initiator = Some(Initiator {
+            initiator_type: "script".to_string(),
+            stack: Some(Stack {
+                call_frames: vec![CallFrame {
+                    function_name: "submitForm".to_string(),
+                    url: "https://example.com/app.js".to_string(),
+                    line_number: 99,
+                    column_number: Some(5),
                 }],
-                post_data: Some(PostData { text: Some(r#"{"x":1}"#.to_string()) }),
-            },
-            response: Response {
-                status: 201,
-                status_text: "Created".to_string(),
-                headers: vec![Header {
-                    name: "Content-Type".to_string(),
-                    value: "application/json".to_string(),
-                }],
-                content: Content {
-                    size: 128,
-                    mime_type: "application/json".to_string(),
-                    text: Some(r#"{"id":42}"#.to_string()),
-                },
-            },
-            timings: Timings {
-                blocked: Some(1.0),
-                dns: Some(2.0),
-                connect: Some(3.0),
-                send: 1.0,
-                wait: 50.0,
-                receive: 4.5,
-            },
-            initiator: Some(Initiator {
-                initiator_type: "script".to_string(),
-                stack: Some(Stack {
-                    call_frames: vec![CallFrame {
-                        function_name: "submitForm".to_string(),
-                        url: "https://example.com/app.js".to_string(),
-                        line_number: 99,
-                        column_number: Some(5),
-                    }],
-                }),
             }),
-        }
+        });
+        e
     }
 
     #[test]
