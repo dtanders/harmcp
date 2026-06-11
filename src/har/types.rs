@@ -1,3 +1,4 @@
+use base64::Engine;
 use serde::Deserialize;
 
 fn unknown_size() -> i64 {
@@ -79,6 +80,39 @@ pub struct Content {
     pub text: Option<String>,
     #[serde(default)]
     pub encoding: Option<String>,
+}
+
+/// The response body after applying HAR's `content.encoding`.
+#[derive(Debug)]
+pub enum DecodedBody<'a> {
+    /// No body present.
+    None,
+    /// Plain text body, stored as-is in the HAR.
+    Text(&'a str),
+    /// Base64 body that decoded to valid UTF-8.
+    DecodedText(String),
+    /// Base64 body that decoded to non-UTF-8 bytes.
+    Binary(Vec<u8>),
+    /// Marked base64 but failed to decode; raw stored text.
+    Invalid(&'a str),
+}
+
+impl Content {
+    pub fn decoded_body(&self) -> DecodedBody<'_> {
+        match (&self.text, self.encoding.as_deref()) {
+            (None, _) => DecodedBody::None,
+            (Some(t), Some("base64")) => {
+                match base64::engine::general_purpose::STANDARD.decode(t) {
+                    Ok(bytes) => match String::from_utf8(bytes) {
+                        Ok(s) => DecodedBody::DecodedText(s),
+                        Err(e) => DecodedBody::Binary(e.into_bytes()),
+                    },
+                    Err(_) => DecodedBody::Invalid(t),
+                }
+            }
+            (Some(t), _) => DecodedBody::Text(t),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -334,5 +368,37 @@ mod tests {
         assert!(e.response.content.encoding.is_none());
         assert!(e.server_ip_address.is_none());
         assert!(e.websocket_messages.is_none());
+    }
+
+    #[test]
+    fn decoded_body_plain_text_passthrough() {
+        let mut e = test_entry();
+        e.response.content.text = Some("hello".to_string());
+        match e.response.content.decoded_body() {
+            DecodedBody::Text(t) => assert_eq!(t, "hello"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decoded_body_base64_utf8() {
+        let mut e = test_entry();
+        e.response.content.text = Some("aGVsbG8=".to_string());
+        e.response.content.encoding = Some("base64".to_string());
+        match e.response.content.decoded_body() {
+            DecodedBody::DecodedText(s) => assert_eq!(s, "hello"),
+            other => panic!("expected DecodedText, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decoded_body_base64_binary() {
+        let mut e = test_entry();
+        e.response.content.text = Some("iVBORw==".to_string()); // decodes to non-UTF-8 bytes
+        e.response.content.encoding = Some("base64".to_string());
+        match e.response.content.decoded_body() {
+            DecodedBody::Binary(b) => assert_eq!(b.len(), 4),
+            other => panic!("expected Binary, got {other:?}"),
+        }
     }
 }

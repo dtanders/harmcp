@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 
 use crate::cli::Column;
-use crate::har::types::Entry;
+use crate::har::types::{DecodedBody, Entry};
 
 pub fn list_row_value(entry: &Entry, index: usize, columns: &[Column]) -> Value {
     let mut map = serde_json::Map::new();
@@ -32,9 +32,23 @@ pub fn headers_value(entry: &Entry) -> Value {
 }
 
 pub fn body_value(entry: &Entry) -> Value {
+    let (response_body, note) = match entry.response.content.decoded_body() {
+        DecodedBody::None => (Value::Null, Value::Null),
+        DecodedBody::Text(t) => (json!(t), Value::Null),
+        DecodedBody::DecodedText(s) => (json!(s), json!("decoded from base64")),
+        DecodedBody::Binary(b) => (
+            Value::Null,
+            json!(format!(
+                "binary body: {} bytes after base64 decode",
+                b.len()
+            )),
+        ),
+        DecodedBody::Invalid(t) => (json!(t), json!("marked base64 but failed to decode")),
+    };
     json!({
         "requestBody": entry.request.post_data.as_ref().and_then(|p| p.text.as_deref()),
-        "responseBody": entry.response.content.text.as_deref(),
+        "responseBody": response_body,
+        "responseBodyNote": note,
     })
 }
 

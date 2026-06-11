@@ -195,3 +195,11 @@ fn detail_multiple_indices_one_missing_fails_after_printing_found() {
         .stdout(predicate::str::contains("Accept"))
         .stderr(predicate::str::contains("not found"));
 }
+
+#[test]
+fn body_of_base64_binary_entry_shows_note_not_garbage() {
+    harmcp(&["body", "2"])
+        .success()
+        .stdout(predicate::str::contains("binary body"))
+        .stdout(predicate::str::contains("4 bytes"));
+}

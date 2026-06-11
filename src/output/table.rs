@@ -1,5 +1,5 @@
 use crate::cli::Column;
-use crate::har::types::Entry;
+use crate::har::types::{DecodedBody, Entry};
 
 const URL_MAX: usize = 60;
 
@@ -105,9 +105,21 @@ pub fn print_detail_body(entry: &Entry) {
     }
     println!();
     println!("=== Response Body ===");
-    match entry.response.content.text.as_deref() {
-        Some(text) => println!("{}", text),
-        None => println!("(none)"),
+    match entry.response.content.decoded_body() {
+        DecodedBody::None => println!("(none)"),
+        DecodedBody::Text(t) => println!("{}", t),
+        DecodedBody::DecodedText(s) => {
+            println!("(decoded from base64)");
+            println!("{}", s);
+        }
+        DecodedBody::Binary(b) => println!(
+            "(binary body: {} bytes after base64 decode; use `body <idx> --output <file>` to save)",
+            b.len()
+        ),
+        DecodedBody::Invalid(t) => {
+            println!("(marked base64 but failed to decode; raw text follows)");
+            println!("{}", t);
+        }
     }
 }
 
