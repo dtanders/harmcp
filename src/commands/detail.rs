@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::cli::OutputFormat;
 use crate::error::{HarError, Result};
 use crate::har::stream::stream_entries;
+use crate::input;
 use crate::output::{self, DetailSection};
 
 pub fn run(
@@ -12,7 +13,7 @@ pub fn run(
     format: &OutputFormat,
 ) -> Result<()> {
     let mut found = false;
-    let reader = crate::input::open(file)?;
+    let reader = input::open(file)?;
     let total = stream_entries(reader, |idx, entry| {
         if idx == target {
             found = true;
