@@ -105,6 +105,12 @@ pub struct FilterArgs {
     /// Only entries started before this time (RFC 3339 or YYYY-MM-DD)
     #[arg(long)]
     pub before: Option<String>,
+    /// Minimum total entry time in milliseconds
+    #[arg(long)]
+    pub min_time: Option<f64>,
+    /// Maximum total entry time in milliseconds
+    #[arg(long)]
+    pub max_time: Option<f64>,
 }
 
 #[derive(Args)]

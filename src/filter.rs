@@ -17,6 +17,8 @@ pub struct Filters {
     exclude_css: bool,
     after: Option<DateTime<FixedOffset>>,
     before: Option<DateTime<FixedOffset>>,
+    min_time: Option<f64>,
+    max_time: Option<f64>,
 }
 
 impl Filters {
@@ -34,6 +36,8 @@ impl Filters {
             exclude_css: args.no_css || args.no_assets,
             after: args.after.as_deref().map(parse_when).transpose()?,
             before: args.before.as_deref().map(parse_when).transpose()?,
+            min_time: args.min_time,
+            max_time: args.max_time,
         })
     }
 
@@ -84,6 +88,16 @@ impl Filters {
         }
         if self.exclude_css && is_css_mime(&entry.response.content.mime_type) {
             return false;
+        }
+        if let Some(min) = self.min_time {
+            if entry.time < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.max_time {
+            if entry.time > max {
+                return false;
+            }
         }
         if self.after.is_some() || self.before.is_some() {
             match DateTime::parse_from_rfc3339(&entry.started_date_time) {
@@ -388,5 +402,29 @@ mod tests {
             ..FilterArgs::default()
         })
         .is_err());
+    }
+
+    #[test]
+    fn min_max_time_filter() {
+        let mut slow = make_entry("GET", "", 200, "", 0);
+        slow.time = 2000.0;
+        let mut fast = make_entry("GET", "", 200, "", 0);
+        fast.time = 5.0;
+
+        let f = Filters::from_args(&FilterArgs {
+            min_time: Some(1000.0),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(f.matches(&slow));
+        assert!(!f.matches(&fast));
+
+        let f2 = Filters::from_args(&FilterArgs {
+            max_time: Some(1000.0),
+            ..FilterArgs::default()
+        })
+        .unwrap();
+        assert!(!f2.matches(&slow));
+        assert!(f2.matches(&fast));
     }
 }
