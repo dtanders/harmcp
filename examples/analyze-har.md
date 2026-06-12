@@ -11,11 +11,27 @@ description: Use harmcp to investigate a HAR (HTTP Archive) file — finding slo
 
 ```
 harmcp <file.har> <command> [options]
+harmcp - <command> [options]   # read from stdin
 ```
 
-## Start with a list overview
+## Start with a summary
 
-Always begin by listing the entries to understand what's in the file:
+Always begin with `summary` to understand what's in the file before narrowing down:
+
+```bash
+harmcp capture.har summary
+```
+
+This shows total entry count, status class breakdown, top domains and MIME types, and the slowest/largest entry. Takes a single streaming pass. Accepts all filter flags.
+
+For large files or remote access, pipe via stdin:
+```bash
+gunzip -c big.har.gz | harmcp - summary
+```
+
+## List entries
+
+After sizing up the file, list entries to find the ones you want:
 
 ```bash
 harmcp capture.har list
@@ -40,12 +56,21 @@ Narrow down to entries of interest before diving into details.
 | Specific method | `--method` | `--method POST` |
 | Status class | `--status` | `--status 4xx`, `--status 5xx`, `--status 200-299` |
 | URL substring | `--url` | `--url /api/` |
-| URL regex | `--url-regex` | `--url-regex 'auth|login|token'` |
+| URL regex | `--url-regex` | `--url-regex 'auth\|login\|token'` |
 | MIME type | `--mime` | `--mime json`, `--mime image` |
 | Response size | `--min-size` / `--max-size` | `--min-size 100000` |
 | No media | `--no-media` | excludes image, video, audio, font |
 | No CSS | `--no-css` | |
 | No media or CSS | `--no-assets` | shorthand for both |
+| Exclude URL | `--not-url` | `--not-url telemetry` |
+| Exclude MIME | `--not-mime` | `--not-mime html` |
+| Exclude status | `--not-status` | `--not-status 3xx` |
+| Exclude method | `--not-method` | `--not-method OPTIONS` |
+| Time window | `--after` / `--before` | `--after 2024-06-01`, `--before 2024-06-02T12:00:00Z` |
+| Duration | `--min-time` / `--max-time` | `--min-time 1000` (ms) |
+| Request header | `--header` | `--header authorization`, `--header content-type=json` |
+| Response header | `--resp-header` | `--resp-header cache-control=no-store` |
+| Page scope | `--page` | `--page page_1` (see `pages` command) |
 
 Filters combine with AND. Find large failed JSON responses:
 
@@ -53,16 +78,39 @@ Filters combine with AND. Find large failed JSON responses:
 harmcp capture.har list --status 5xx --mime json --min-size 1000
 ```
 
-## Inspect a specific entry
-
-Once you have an IDX, use detail commands to dig in.
+## Sort and limit
 
 ```bash
-harmcp capture.har headers  4   # request + response headers
-harmcp capture.har body     4   # request payload + response body
-harmcp capture.har timings  4   # blocked/dns/connect/send/wait/receive breakdown
-harmcp capture.har stack    4   # JS initiator call stack (if present)
-harmcp capture.har all      4   # everything above in one output
+# Top 10 slowest requests
+harmcp capture.har list --sort time --desc --limit 10
+
+# Largest responses
+harmcp capture.har list --sort size --desc --limit 10
+
+# First 5 matching entries (stops streaming early, no buffering)
+harmcp capture.har list --url /api/ --limit 5
+```
+
+## Inspect a specific entry
+
+Once you have an IDX, use detail commands to dig in. Multiple indices are resolved in one pass:
+
+```bash
+harmcp capture.har headers  4        # request + response headers
+harmcp capture.har body     4        # request payload + response body
+harmcp capture.har timings  4        # blocked/dns/connect/send/wait/receive breakdown
+harmcp capture.har stack    4        # JS initiator call stack (if present)
+harmcp capture.har cookies  4        # request + response cookies
+harmcp capture.har info     4        # timestamp, server IP, redirect, sizes, query params
+harmcp capture.har ws       4        # WebSocket messages (if entry is a WebSocket)
+harmcp capture.har all      4        # everything above in one output
+harmcp capture.har headers  3 7 9    # multiple entries, single streaming pass
+```
+
+To save a binary response body to disk (base64 bodies are decoded automatically):
+```bash
+harmcp capture.har body 5 --output response.bin
+harmcp capture.har body 2 --output logo.png
 ```
 
 Detail commands also support `--format json` for structured output:
@@ -71,15 +119,23 @@ Detail commands also support `--format json` for structured output:
 harmcp --format json capture.har all 4
 ```
 
+## Pages
+
+List pages recorded in the HAR (`log.pages`) and filter entries by page:
+
+```bash
+harmcp capture.har pages
+harmcp capture.har list --page page_1
+harmcp capture.har summary --page page_1
+```
+
 ## Common investigation workflows
 
 ### Find the slowest requests
 
 ```bash
-harmcp --format tsv capture.har list | sort -t$'\t' -k7 -rn | head -10
+harmcp capture.har list --sort time --desc --limit 10
 ```
-
-The last TSV column is `time_ms`; sort descending to surface slow entries.
 
 ### Find all errors and inspect the first one
 
@@ -110,11 +166,25 @@ Prints the raw request body (JSON, form data, etc.) and the response body.
 ### Scan for auth tokens in headers
 
 ```bash
-harmcp --format json capture.har list --url /api/ | \
-  while read line; do
-    idx=$(echo "$line" | jq -r '.index')
-    harmcp --format json capture.har headers "$idx" | jq '.requestHeaders[] | select(.name | test("auth|cookie|token"; "i"))'
-  done
+# List all entries that have an Authorization request header
+harmcp capture.har list --header authorization
+
+# Entries with a specific cookie
+harmcp capture.har list --header cookie=session_id
+
+# Inspect headers for a specific entry
+harmcp capture.har headers 4
+```
+
+### Scope investigation to a page
+
+```bash
+# See what pages are in the file
+harmcp capture.har pages
+
+# Investigate only entries from a specific page
+harmcp capture.har list --page page_1
+harmcp capture.har summary --page page_1 --no-assets
 ```
 
 ## Error handling
@@ -148,9 +218,12 @@ Single object with nested sections:
   "method": "GET",
   "url": "https://example.com/api/users",
   "status": 200,
+  "statusText": "OK",
   "headers": { "requestHeaders": [...], "responseHeaders": [...] },
   "body":    { "requestBody": null, "responseBody": "[{\"id\":1}]" },
   "timings": { "blocked": 1.0, "dns": 2.0, "connect": 3.0, "send": 0.5, "wait": 100.0, "receive": 16.9, "total": 123.4 },
-  "stack":   { "type": "script", "callFrames": [{"functionName": "fetchUsers", "url": "app.js", "lineNumber": 42}] }
+  "stack":   { "type": "script", "callFrames": [{"functionName": "fetchUsers", "url": "app.js", "lineNumber": 42}] },
+  "cookies": { "requestCookies": [], "responseCookies": [...] },
+  "info":    { "startedDateTime": "...", "serverIPAddress": "...", "queryString": [...] }
 }
 ```

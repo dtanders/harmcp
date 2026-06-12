@@ -17,11 +17,49 @@ cargo install --git https://github.com/dtanders/harmcp
 
 ```
 harmcp <file.har> <command> [options]
+harmcp - <command> [options]   # read from stdin
 ```
+
+Pass `-` as the file to read from stdin:
+```bash
+gunzip -c big.har.gz | harmcp - list
+cat capture.har | harmcp - summary
+```
+
+## Commands
+
+### summary
+
+Get aggregate statistics in one pass. A good first step to size up a file.
+
+```
+$ harmcp capture.har summary
+
+entries:      4
+total bytes:  516
+total time:   188.4 ms
+time span:    2024-01-01T00:00:00.000Z .. 2024-01-01T00:00:03.000Z
+
+status:  1xx 1   2xx 2   3xx 0   4xx 1   5xx 0   other 0
+
+top mime types:
+  (none)                                   1
+  application/json                         1
+  image/png                                1
+  text/html                                1
+
+top domains:
+  example.com                              4
+
+slowest:  [0] 123.4 ms  https://example.com/api/users?limit=10
+largest:  [0] 512 bytes  https://example.com/api/users?limit=10
+```
+
+Respects all filter flags. JSON format produces `{"entries": N, "totalBytes": ..., "statusClasses": {...}, ...}`.
 
 ### list
 
-Print all entries as a table. Use filters to narrow down.
+Print matching entries as a table. Use filters to narrow down.
 
 ```
 $ harmcp capture.har list
@@ -45,36 +83,71 @@ IDX    METHOD   STATUS  URL                                                     
 | `--no-media` | exclude image, video, audio, font | |
 | `--no-css` | exclude CSS | |
 | `--no-assets` | exclude media + CSS (both of the above) | |
+| `--not-url` | exclude URL substring, case-insensitive | `--not-url telemetry` |
+| `--not-mime` | exclude MIME substring, case-insensitive | `--not-mime html` |
+| `--not-status` | exclude status pattern | `--not-status 3xx` |
+| `--not-method` | exclude method, case-insensitive | `--not-method OPTIONS` |
+| `--after` | started at or after (RFC 3339 or YYYY-MM-DD) | `--after 2024-06-01` |
+| `--before` | started before (RFC 3339 or YYYY-MM-DD) | `--before 2024-06-02T12:00:00Z` |
+| `--min-time` / `--max-time` | total entry time in ms | `--min-time 1000` |
+| `--header` | request header present or name=value substring (repeatable) | `--header authorization` · `--header content-type=json` |
+| `--resp-header` | response header present or name=value substring (repeatable) | `--resp-header cache-control=no-store` |
+| `--page` | page id from `pages` command | `--page page_1` |
 
 Filters combine with AND. Show only large server errors:
 ```
 harmcp capture.har list --status 5xx --min-size 1000
 ```
 
-**Column selection** — default columns are `index,method,status,url,mime,size,time`. Override with `--columns`:
+**Sorting and limiting:**
+
+```bash
+# Top 10 slowest requests
+harmcp capture.har list --sort time --desc --limit 10
+
+# Sort by size descending
+harmcp capture.har list --sort size --desc
+
+# First 5 matching entries (stops streaming early)
+harmcp capture.har list --url /api/ --limit 5
 ```
-harmcp capture.har list --columns index,url,time
+
+`--sort` buffers all matching entries to sort them. `--limit` without `--sort` stops streaming early.
+
+**Column selection** — default columns: `index,method,status,url,mime,size,time`. Add `start` for the timestamp:
+```
+harmcp capture.har list --columns index,url,time,start
 ```
 
 ### Detail commands
 
-All take a zero-based entry index from the `IDX` column.
+All detail commands accept one or more zero-based indices from the `IDX` column. Multiple indices are resolved in a single streaming pass.
 
-```
-harmcp capture.har headers 0    # request + response headers
-harmcp capture.har body     0   # request payload + response body
-harmcp capture.har timings  0   # timing breakdown
-harmcp capture.har stack    0   # JS initiator call stack
-harmcp capture.har all      0   # everything above combined
+```bash
+harmcp capture.har headers  0 5 12   # request + response headers
+harmcp capture.har body     0        # request payload + response body
+harmcp capture.har timings  0        # timing breakdown
+harmcp capture.har stack    0        # JS initiator call stack
+harmcp capture.har cookies  0        # request + response cookies
+harmcp capture.har info     0        # timestamp, status text, server IP, redirect, sizes, query params
+harmcp capture.har ws       3        # WebSocket messages (_webSocketMessages)
+harmcp capture.har all      0        # everything above combined
 ```
 
-**headers:**
+`body --output <file>` writes the decoded response body to a file instead of stdout (base64 bodies are decoded automatically; works for binary responses):
+```bash
+harmcp capture.har body 2 --output logo.png
 ```
-=== Request Headers ===
-Accept: application/json
 
-=== Response Headers ===
-Content-Type: application/json
+**info:**
+```
+started:       2024-01-01T00:00:00.000Z
+status:        200 OK
+server ip:     93.184.216.34
+page:          page_1
+
+=== Query Parameters ===
+limit = 10
 ```
 
 **timings:**
@@ -87,6 +160,22 @@ wait              100.0 ms
 receive            16.9 ms
 --------------------------
 total             123.4 ms
+```
+
+### pages
+
+List the pages recorded in the HAR (from `log.pages`):
+
+```
+$ harmcp capture.har pages
+
+page_1  2024-01-01T00:00:00.000Z  Example Dashboard
+```
+
+Use `--page` in `list` and `summary` to scope to entries from one page:
+```bash
+harmcp capture.har list --page page_1
+harmcp capture.har summary --page page_1
 ```
 
 ### Output formats
@@ -123,7 +212,7 @@ Once installed, invoke it with `/analyze-har` or `Skill({ skill: "analyze-har" }
 
 ## How it works
 
-HAR files can be hundreds of megabytes. `harmcp` uses a custom `serde` visitor chain on `serde_json::Deserializer::from_reader` to walk `log.entries` as a token stream — only one entry is in memory at a time. Detail commands stop streaming after finding their target entry, draining the remainder cheaply via `IgnoredAny`. Malformed entries are warned and skipped rather than aborting the stream.
+HAR files can be hundreds of megabytes. `harmcp` uses a custom `serde` visitor chain on `serde_json::Deserializer::from_reader` to walk `log.entries` as a token stream — only one entry is in memory at a time. Detail commands stop streaming after finding their target entry, draining the remainder cheaply via `IgnoredAny`. Malformed entries are warned and skipped rather than aborting the stream. `--sort` is the only mode that buffers (bodies are shed before buffering to limit memory).
 
 ## Building
 

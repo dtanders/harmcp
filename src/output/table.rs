@@ -295,7 +295,7 @@ pub fn print_detail_all(entry: &Entry, index: usize) {
     if entry
         .websocket_messages
         .as_deref()
-        .map_or(false, |m| !m.is_empty())
+        .is_some_and(|m| !m.is_empty())
     {
         println!();
         println!("=== WebSocket Messages ===");

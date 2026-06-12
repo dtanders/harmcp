@@ -206,7 +206,7 @@ fn headers_match(headers: &[Header], wanted: &[(String, Option<String>)]) -> boo
             h.name.to_lowercase() == *name
                 && value
                     .as_deref()
-                    .map_or(true, |v| h.value.to_lowercase().contains(v))
+                    .is_none_or(|v| h.value.to_lowercase().contains(v))
         })
     })
 }
