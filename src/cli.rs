@@ -5,11 +5,12 @@ use std::path::PathBuf;
 #[command(
     name = "harmcp",
     version,
-    about = "Extract structured data from HAR log files"
+    about = "Extract structured data from HAR log files",
+    subcommand_precedence_over_arg = true
 )]
 pub struct Cli {
-    /// Path to the HAR file
-    pub file: PathBuf,
+    /// Path to the HAR file (not required for the `skill` subcommand)
+    pub file: Option<PathBuf>,
     #[command(subcommand)]
     pub command: Command,
     /// Output format
@@ -69,6 +70,24 @@ pub enum Command {
     Summary(FilterArgs),
     /// List the pages recorded in the HAR (id, start time, title)
     Pages,
+    /// Install the analyze-har Claude Code skill
+    Skill(SkillArgs),
+}
+
+#[derive(Args)]
+pub struct SkillArgs {
+    #[command(subcommand)]
+    pub action: SkillAction,
+}
+
+#[derive(Subcommand)]
+pub enum SkillAction {
+    /// Write the skill file to a Claude Code skills directory
+    Install {
+        /// Install to ~/.claude/skills/ (default: .claude/skills/ in current directory)
+        #[arg(long)]
+        global: bool,
+    },
 }
 
 #[derive(Args, Default)]
